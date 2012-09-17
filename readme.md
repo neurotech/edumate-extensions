@@ -3,9 +3,6 @@ A set of custom reports for Rosebank College's Edumate system.
 
 ## Overview
 
-### Birthday Book
-Placeholder
-
 ### Co-Curricular Batch Rolls
 Placeholder
 
