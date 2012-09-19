@@ -1,3 +1,13 @@
+/*	Project:
+		Year 12 Reference Letters
+
+	Objective:
+		Produces a list of Year 12 students and the subjects they studied in their graduating year, sorted by surname. This data is used as part of the writing process for the reference letters received by Year 12 students at the end of the year.
+						
+	Author:
+		Tim Douglas
+*/
+
 SELECT
 	contact.surname as "Surname",
 	contact.firstname as "First Name",

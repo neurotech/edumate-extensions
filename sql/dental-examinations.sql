@@ -1,7 +1,7 @@
 /*	Project:
 		Dental Examinations Report
 
-	Description:
+	Objective:
 		Used to generate a list of students who are 14 years old or younger.
 		This list will be used to select random students for dental examinations as part of The National Child Oral Health Survey.
 		The result contains the student's first name, surname, birth date, current year level and age.
@@ -11,19 +11,12 @@
 						
 	Author:
 		Tim Douglas
-	
-	Last updated:
-		Thursday, 9 August 2012
-	
-	Version:
-		1.1
-	
-	
+
 	Let's begin by selecting the first name, surname and birthdate from the CONTACT table, as well as the 'year level' from the form_run table.
 	The final line of the SELECT statement produces a column containing an integer representing the student's current age.
 */
 	
-SELECT /* Make this into a WITH */
+SELECT
 	contact.firstname as "First Name", 
 	contact.surname as "Surname",
 	contact.birthdate as "Date of Birth (YYYY-MM-DD)",
