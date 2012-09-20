@@ -8,21 +8,21 @@ Generates a list of students who've had their application to join the College as
 
 #### Notes:
 **student_status_id** has to be one of the following:
-1. Application Cancelled
-2. Alumni
-3. Past Enrolment
-4. Returning Enrolment
-5. Current Enrolment
-6. Place Accepted
-7. Offered Place
-8. Interview Pending
-9. Wait Listed
-10. Application Received
-11. Information Sent
-12. Enquiry
-13. Interview Complete
-14. Expired Offer
-15. Expired Application
+	1. Application Cancelled
+	2. Alumni
+	3. Past Enrolment
+	4. Returning Enrolment
+	5. Current Enrolment
+	6. Place Accepted
+	7. Offered Place
+	8. Interview Pending
+	9. Wait Listed
+	10. Application Received
+	11. Information Sent
+	12. Enquiry
+	13. Interview Complete
+	14. Expired Offer
+	15. Expired Application
 
 ### Co-Curricular Batch Rolls (co-curricular_batch-rolls.sql)
 The results from this query are referenced by /templates/co-curricular_batch-rolls.sxw. Edumate generates a large, print-friendly PDF with two pages per Co-Curricular group. This PDF is printed by the Printery for distribution to the Co-Curricular coaches each Thursday.
