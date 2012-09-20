@@ -1,13 +1,3 @@
-/*	Project:
-		Co-Curricular Batch Rolls
-
-	Objective:
-		The results from this query are referenced by /templates/co-curricular_batch-rolls.sxw. Edumate generates a large, print-friendly PDF with two pages per Co-Curricular group. This PDF is printed by the Printery for distribution to the Co-Curricular coaches each Thursday.
-						
-	Author:
-		Tim Douglas
-*/
-
 SELECT
 	TO_CHAR(DATE(start_date), 'DD/MM/YYYY') AS "Start Date",
 	TO_CHAR(DATE(end_date), 'DD/MM/YYYY') AS "End Date",

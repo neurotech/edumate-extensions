@@ -1,13 +1,3 @@
-/*	Project:
-		Students on Events
-
-	Objective:
-		The results from this query are referenced by /templates/students-on-event.sxw to produce a printable list of all students attending events for a given date range. This list is printed by the Printery and then distributed to the staff responsible for the students attending each event.
-						
-	Author:
-		Tim Douglas
-*/
-
 WITH eventall AS
 (
 	SELECT *

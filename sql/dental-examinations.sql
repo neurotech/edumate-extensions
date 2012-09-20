@@ -1,20 +1,5 @@
-/*	Project:
-		Dental Examinations Report
-
-	Objective:
-		Used to generate a list of students who are 14 years old or younger.
-		This list will be used to select random students for dental examinations as part of The National Child Oral Health Survey.
-		The result contains the student's first name, surname, birth date, current year level and age.
-		It is sorted by oldest to youngest, then year level and then alphabetically by surname.
-		The original request to build this query was submitted by Elizabeth Clark. The ticket can be viewed here:
-		http://helpdesk.rosebank.nsw.edu.au:9675/tickets/list/single_ticket/6881
-						
-	Author:
-		Tim Douglas
-
-	Let's begin by selecting the first name, surname and birthdate from the CONTACT table, as well as the 'year level' from the form_run table.
-	The final line of the SELECT statement produces a column containing an integer representing the student's current age.
-*/
+/*	Let's begin by selecting the first name, surname and birthdate from the CONTACT table, as well as the 'year level' from the form_run table.
+	The final line of the SELECT statement produces a column containing an integer representing the student's current age. */
 	
 SELECT
 	contact.firstname as "First Name", 
