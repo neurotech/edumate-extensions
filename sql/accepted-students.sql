@@ -29,8 +29,8 @@
 SELECT
 	contact.firstname as "First Name",
 	contact.surname as "Surname",
-	date_application,
-	exp_form_run
+	date_application as "Date of Application",
+	exp_form_run as "Expected Year and Form"
 
 FROM table(edumate.getallstudentstatus(current_date)) accepted
 
