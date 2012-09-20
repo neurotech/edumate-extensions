@@ -8,7 +8,7 @@
 		Tim Douglas
 	
 	Notes:
-		studentStatusId has to be one of the following
+		student_status_id has to be one of the following
 			1	Application Cancelled
 			2	Alumni
 			3	Past Enrolment
@@ -27,9 +27,8 @@
 */
 
 SELECT
-	student_id,
-	contact.firstname as "STUDENT_FIRSTNAME",
-	contact.surname as "STUDENT_SURNAME",
+	contact.firstname as "First Name",
+	contact.surname as "Surname",
 	date_application,
 	exp_form_run
 
@@ -41,4 +40,4 @@ WHERE
 	student_status_id = '6'
 
 ORDER BY
-	exp_form_run ASC, STUDENT_SURNAME ASC
+	exp_form_run ASC, Surname ASC
