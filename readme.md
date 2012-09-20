@@ -7,7 +7,9 @@ A set of custom reports for Rosebank College's Edumate system.
 Generates a list of students who've had their application to join the College as a student accepted.
 
 #### Notes:
+
 **student_status_id** has to be one of the following:
+
 1. Application Cancelled
 2. Alumni
 3. Past Enrolment
