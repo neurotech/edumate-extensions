@@ -27,7 +27,7 @@ Generates a list of students who've had their application to join the College as
 15. Expired Application
 
 ### Co-Curricular Batch Rolls (co-curricular_batch-rolls.sql)
-The results from this query are referenced by /templates/co-curricular_batch-rolls.sxw. Edumate generates a large, print-friendly PDF with two pages per Co-Curricular group. This PDF is printed by the Printery for distribution to the Co-Curricular coaches each Thursday.
+The results from this query are referenced by **/templates/co-curricular_batch-rolls.sxw**. Edumate generates a large, print-friendly PDF with two pages per Co-Curricular group. This PDF is printed by the Printery for distribution to the Co-Curricular coaches each Thursday.
 
 ### Dental Examinations (dental-examinations.sql)
 Generates a list of students who are 14 years old or younger. This list will be used to select random students for dental examinations as part of The National Child Oral Health Survey.
@@ -35,7 +35,7 @@ Generates a list of students who are 14 years old or younger. This list will be 
 The result contains the student's first name, surname, birth date, current year level and age. It is sorted by oldest to youngest, then year level and then alphabetically by surname.
 
 ### Students on Events (students-on-event.sql)
-The results from this query are referenced by /templates/students-on-event.sxw to produce a printable list of all students attending events for a given date range. This list is printed by the Printery and then distributed to the staff responsible for the students attending each event.
+The results from this query are referenced by **/templates/students-on-event.sxw** to produce a printable list of all students attending events for a given date range. This list is printed by the Printery and then distributed to the staff responsible for the students attending each event.
 
 ### Year 12 References (year-12-references.sql)
 Produces a list of Year 12 students and the subjects they studied in their graduating year, sorted by surname. This data is used as part of the writing process for the reference letters received by Year 12 students at the end of the year.
