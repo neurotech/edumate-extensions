@@ -34,6 +34,9 @@ Generates a list of students who are 14 years old or younger. This list will be 
 
 The result contains the student's first name, surname, birth date, current year level and age. It is sorted by oldest to youngest, then year level and then alphabetically by surname.
 
+### Future Students - International Information (future-students_international-info.sql)
+This report is a modified clone of the 'Accepted Students by Year Group' report. It has been modified to list all future students with a country of birth other than Australia, as well as their spoken language and what school they're currently attending.
+
 ### Students on Events (students-on-event.sql)
 The results from this query are referenced by **/templates/students-on-event.sxw** to produce a printable list of all students attending events for a given date range. This list is printed by the Printery and then distributed to the staff responsible for the students attending each event.
 
