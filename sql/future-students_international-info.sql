@@ -33,5 +33,3 @@ WITH future_students AS
 SELECT *
 
 FROM future_students
-
--- WHERE future_students.exp_form_run = '[[Starting Year and Cohort=query_list(SELECT form_run.form_run FROM form_run WHERE form_run >= '2012 %' ORDER BY form_run)]]'
