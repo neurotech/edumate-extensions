@@ -17,9 +17,9 @@ Generates a list of students who've had their application to join the College as
 5. Current Enrolment
 6. Place Accepted
 7. Offered Place
-8. Interview Pending
-9. Wait Listed
-10. Application Received
+8. Interview Pending - yes
+9. Wait Listed - yes
+10. Application Received - yes
 11. Information Sent
 12. Enquiry
 13. Interview Complete
@@ -33,6 +33,21 @@ The results from this query are referenced by **/templates/co-curricular_batch-r
 Generates a list of students who are 14 years old or younger. This list will be used to select random students for dental examinations as part of The National Child Oral Health Survey.
 
 The result contains the student's first name, surname, birth date, current year level and age. It is sorted by oldest to youngest, then year level and then alphabetically by surname.
+
+###  Future Students (Interview Pending/Wait Listed/Application Received) - Addresses	 
+This report is a modified clone of the 'future-students_carer-addresses.sql' report. It will render the following information for a specified form & year:
+
+	1. Student Firstname and Lastname
+	2. Gender, Gender Counts, Total Student Counts
+	3. Expected Form
+	4. Status
+	5. Priority
+	6. Student Street, Suburb, Country
+	7. Parent Titles
+	8. Parent Firstnames
+	9. Specific Carer Firstnames, Surnames and Email Addresses
+
+This data is then be limited to only show students with student_status_id of either be 8, 9, or 10 (Interview Pending/Wait Listed/Application Received).
 
 ### Future Students - International Information (future-students_international-info.sql)
 This report is a modified clone of the 'Accepted Students by Year Group' report. It has been modified to list all future students with a country of birth other than Australia, as well as students whose first language is anything other than English. It also lists what school they're currently attending.
