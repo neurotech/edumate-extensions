@@ -17,9 +17,9 @@ Generates a list of students who've had their application to join the College as
 5. Current Enrolment
 6. Place Accepted
 7. Offered Place
-8. Interview Pending - yes
-9. Wait Listed - yes
-10. Application Received - yes
+8. Interview Pending
+9. Wait Listed
+10. Application Received
 11. Information Sent
 12. Enquiry
 13. Interview Complete
