@@ -23,13 +23,12 @@ WITH future_students AS
 	
 	
 	WHERE
-		student_status_id = '6' AND
-		country != 'Australia'
+		student_status_id = '6' AND	language != 'English' OR country != 'Australia'
 	
 	ORDER BY
 		exp_form_run ASC, surname ASC
 )
 
 SELECT *
-
 FROM future_students
+WHERE exp_form_run > '2012%' and language != 'Not Stated / Unknown' and "Country of Birth" != 'Not Stated / Unknown'
