@@ -49,8 +49,8 @@ SELECT
 	aew.form_run,
 	aew.priority,
 	aew.applied,
-	aew.next_interview,
-	aew.date_offer
+	aew.next_interview AS "INTERVIEW",
+	aew.date_offer AS "DATE OF OFFER"
 
 FROM aew
 
