@@ -3,6 +3,9 @@ A set of custom reports for Rosebank College's Edumate system.
 
 ## Overview of SQL Files
 
+### Accepted/Expired/Waiting List Students (accepted-expired-waiting_list.sql)
+The results of this query are referenced by **/templates/accepted-expired-waiting_list.sxw**. This report produces a list of all students who are either wait listed, have an expired offer, or have accepted a place in the College. It displays surname, first name, gender, gender counts, birthdate, status, form run, priority and application date.
+
 ### Accepted Students by Year Group (accepted-students.sql)
 Generates a list of students who've had their application to join the College as a student accepted.
 
