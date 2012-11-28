@@ -29,6 +29,9 @@ Generates a list of students who've had their application to join the College as
 ### Co-Curricular Batch Rolls (co-curricular_batch-rolls.sql)
 The results from this query are referenced by **/templates/co-curricular_batch-rolls.sxw**. Edumate generates a large, print-friendly PDF with two pages per Co-Curricular group. This PDF is printed by the Printery for distribution to the Co-Curricular coaches each Thursday.
 
+### Current Students House Information (current-students_house-information.sql)
+Lists all currently enrolled students with their form run, first name, surname and house.
+
 ### Dental Examinations (dental-examinations.sql)
 Generates a list of students who are 14 years old or younger. This list will be used to select random students for dental examinations as part of The National Child Oral Health Survey.
 
