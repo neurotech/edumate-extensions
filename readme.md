@@ -37,7 +37,7 @@ Generates a list of students who are 14 years old or younger. This list will be 
 
 The result contains the student's first name, surname, birth date, current year level and age. It is sorted by oldest to youngest, then year level and then alphabetically by surname.
 
-###  Future Students (Interview Pending/Wait Listed/Application Received) - Addresses	 
+### Future Students (Interview Pending/Wait Listed/Application Received) - Addresses	 
 This report is a modified clone of the 'future-students_carer-addresses.sql' report. It will render the following information for a specified form & year:
 
 1. Student Firstname and Lastname
