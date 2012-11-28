@@ -21,4 +21,4 @@ INNER JOIN form_run ON form_run.form_run_id = futurekids.exp_form_run_id
 
 WHERE student_status_id IN (6, 14, 9)
 
-ORDER BY priority ASC
+ORDER BY priority.priority_level ASC
