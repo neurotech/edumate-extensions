@@ -50,7 +50,7 @@ SELECT
 	aew.priority,
 	aew.applied,
 	aew.next_interview AS "INTERVIEW",
-	aew.date_offer AS "DATE OF OFFER"
+	aew.date_offer AS "DATE_OF_OFFER"
 
 FROM aew
 
