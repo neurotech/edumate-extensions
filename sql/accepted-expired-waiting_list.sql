@@ -56,4 +56,4 @@ FROM aew
 
 FULL JOIN gender_counts ON gender_counts.form_run = aew.form_run
 
-ORDER BY aew.priority_level, aew.status ASC
+ORDER BY aew.status, aew.priority_level ASC
