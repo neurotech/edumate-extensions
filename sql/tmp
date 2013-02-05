@@ -1,1 +1,0 @@
-SELECT COUNT(student_id), student_id FROM table(edumate.get_students_entry_exit()) GROUP BY student_id HAVING COUNT(student_id)>1
