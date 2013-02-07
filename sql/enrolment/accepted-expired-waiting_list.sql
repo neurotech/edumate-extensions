@@ -9,6 +9,7 @@ WITH aew AS
 			WHEN 6 THEN 'Place Accepted'
 			WHEN 14 THEN 'Expired Offer'
 			WHEN 9 THEN 'Wait Listed'
+			WHEN 7 THEN 'Offered Place'
 			END AS "STATUS",
 		form_run,
 		priority,
