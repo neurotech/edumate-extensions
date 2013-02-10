@@ -25,7 +25,7 @@ WITH aew AS
 	INNER JOIN priority on priority.priority_id = futurekids.priority_id
 	INNER JOIN form_run ON form_run.form_run_id = futurekids.exp_form_run_id
 	
-	WHERE student_status_id IN (6, 14, 9)
+	WHERE student_status_id IN (6, 14, 9, 7)
 ),
 
 gender_counts AS
