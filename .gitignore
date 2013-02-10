@@ -163,4 +163,5 @@ pip-log.txt
 # Mac crap
 .DS_Store
 
-.sxw#
+# SXW
+.~lock*.*
