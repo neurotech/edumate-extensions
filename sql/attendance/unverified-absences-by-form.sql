@@ -1,4 +1,11 @@
--- [[From Date=date]]
+-- February 22, 2013
+-- 3:16 PM
+-- Edumate is currently down. Reminder:
+-- Properly SELECT form_run so that the SXW/Report in Edumate can function.
+-- Question: Does view_student_class_enrolment have form_run fields?
+-- Lift query_list snippet (and modify to only show current forms) from:
+-- /Users/neurotech/Dropbox/work/Edumate/edumate-extensions/sql/enrolment/future-students_current-school_interview-date.sql
+
 WITH student_tutor_class AS
     (
     SELECT
@@ -64,7 +71,7 @@ WITH student_tutor_class AS
     )
 
 SELECT
-    TO_CHAR(DATE('[[From Date=date]]'),'DD/MM/YY')||' - '||TO_CHAR(DATE('[[To Date=date]]'),'DD/MM/YY') AS "HEADING",
+    TO_CHAR(DATE('[[From Date=date]]'),'DD/MM/YY')||' to '||TO_CHAR(DATE('[[To Date=date]]'),'DD/MM/YY') AS "HEADING",
     COALESCE(class,'')||' - '||COALESCE(tutor,'') AS "TUTOR_GROUP",
     (CASE WHEN rownum = 1 THEN student_number ELSE '' END) AS "STUDENT",
     (CASE WHEN rownum = 1 THEN firstname ELSE '' END) AS "FIRSTNAME",
