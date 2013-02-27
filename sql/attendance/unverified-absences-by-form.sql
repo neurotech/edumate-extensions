@@ -1,8 +1,11 @@
 -- February 22, 2013
 -- 3:16 PM
--- Edumate is currently down. Reminder:
+-- Edumate is currently down.
+
+-- Reminder:
 -- Properly SELECT form_run so that the SXW/Report in Edumate can function.
--- Question: Does view_student_class_enrolment have form_run fields?
+-- Question: Does view_student_class_enrolment have form_run fields? Yes: Academic Year ID <-> Academic Year
+
 -- Lift query_list snippet (and modify to only show current forms) from:
 -- /Users/neurotech/Dropbox/work/Edumate/edumate-extensions/sql/enrolment/future-students_current-school_interview-date.sql
 
@@ -15,7 +18,8 @@ WITH student_tutor_class AS
         contact.contact_id,
         contact.firstname,
         contact.surname,
-        ROW_NUMBER() OVER (PARTITION BY view_student_class_enrolment.student_id ORDER BY class_teacher.is_primary DESC, view_student_class_enrolment.start_date DESC)
+        ROW_NUMBER() OVER (PARTITION BY view_student_class_enrolment.student_id ORDER BY class_teacher.is_primary DESC, view_student_class_enrolment.start_date DESC),
+        view_student_class_enrolment.academic_year
     FROM view_student_class_enrolment
     INNER JOIN class_teacher ON class_teacher.class_id = view_student_class_enrolment.class_id
     INNER JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
