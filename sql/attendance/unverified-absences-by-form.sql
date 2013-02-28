@@ -1,14 +1,3 @@
--- February 22, 2013
--- 3:16 PM
--- Edumate is currently down.
-
--- Reminder:
--- Properly SELECT form_run so that the SXW/Report in Edumate can function.
--- Question: Does view_student_class_enrolment have form_run fields? Yes: Academic Year ID <-> Academic Year
-
--- Lift query_list snippet (and modify to only show current forms) from:
--- /Users/neurotech/Dropbox/work/Edumate/edumate-extensions/sql/enrolment/future-students_current-school_interview-date.sql
-
 WITH student_tutor_class AS
     (
     SELECT
@@ -18,12 +7,13 @@ WITH student_tutor_class AS
         contact.contact_id,
         contact.firstname,
         contact.surname,
-        ROW_NUMBER() OVER (PARTITION BY view_student_class_enrolment.student_id ORDER BY class_teacher.is_primary DESC, view_student_class_enrolment.start_date DESC),
-        view_student_class_enrolment.academic_year
+        ROW_NUMBER() OVER (PARTITION BY view_student_class_enrolment.student_id ORDER BY class_teacher.is_primary DESC, view_student_class_enrolment.start_date DESC)
+
     FROM view_student_class_enrolment
     INNER JOIN class_teacher ON class_teacher.class_id = view_student_class_enrolment.class_id
     INNER JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
     INNER JOIN contact ON contact.contact_id = teacher.contact_id
+    
     WHERE view_student_class_enrolment.class_type_id = 2
         AND view_student_class_enrolment.start_date <= '[[To Date=date]]'
         AND view_student_class_enrolment.end_date >= '[[To Date=date]]' -- lets take tutor as at last date
@@ -39,6 +29,7 @@ WITH student_tutor_class AS
         student.student_number,
         contact.firstname,
         contact.surname,
+        form_run.form_run,
         daily_attendance.date_on,
         daily_attendance_status.daily_attendance_status AS "DAILY_STATUS",
         period.short_name AS "PERIOD",
@@ -46,7 +37,9 @@ WITH student_tutor_class AS
         COALESCE(absence_reason.absence_reason,'') AS "REASON",
         (CASE WHEN absence_verification.absence_verification is null OR absence_verification.absence_verification_id = 1 THEN '' ELSE absence_verification.absence_verification END) AS "VERIFICATION",
         ROW_NUMBER() OVER (PARTITION BY student.student_id, daily_attendance.date_on ORDER BY period.start_time)
+    
     FROM daily_attendance
+    
     INNER JOIN daily_attendance_status ON daily_attendance_status.daily_attendance_status_id = daily_attendance.daily_attendance_status_id
     INNER JOIN attendance ON attendance.student_id = daily_attendance.student_id
     INNER JOIN lesson ON lesson.lesson_id = attendance.lesson_id 
@@ -57,6 +50,9 @@ WITH student_tutor_class AS
     INNER JOIN period ON period.period_id = period_cycle_day.period_id 
     INNER JOIN student ON student.student_id = daily_attendance.student_id
     INNER JOIN contact ON contact.contact_id = student.contact_id
+	INNER JOIN student_form_run ON daily_attendance.student_id = student_form_run.student_id
+	INNER JOIN form_run ON student_form_run.form_run_id = form_run.form_run_id
+    
     -- get tutor(s)
     LEFT JOIN student_tutor_class ON student_tutor_class.student_id = student.student_id
         AND student_tutor_class.rownum = 1
@@ -84,7 +80,14 @@ SELECT
     period,
     attend_status,
     reason,
-    verification
+    verification,
+    form_run
+
 FROM student_unverifieds
-WHERE period like '%[[Period=query_list(SELECT DISTINCT period FROM period)]]%'
-ORDER BY  student_unverifieds.class, student_unverifieds.surname, student_unverifieds.firstname, student_unverifieds.date_on, student_unverifieds.rownum
+
+WHERE
+	student_unverifieds.period LIKE '%[[Period=query_list(SELECT DISTINCT period FROM period)]]%'
+		AND
+	student_unverifieds.form_run LIKE '[[Form=query_list(SELECT form_run.form_run FROM form_run WHERE form_run > TO_CHAR(YEAR(current date)) || ' %' ORDER BY form_run)]]'
+
+ORDER BY student_unverifieds.class, student_unverifieds.surname, student_unverifieds.firstname, student_unverifieds.date_on, student_unverifieds.rownum
