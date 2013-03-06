@@ -7,15 +7,20 @@ WITH student_tutor_class AS
         contact.contact_id,
         contact.firstname,
         contact.surname,
+        form,
         ROW_NUMBER() OVER (PARTITION BY view_student_class_enrolment.student_id ORDER BY class_teacher.is_primary DESC, view_student_class_enrolment.start_date DESC)
-
     FROM view_student_class_enrolment
+
+INNER JOIN student on view_student_class_enrolment.student_id=student.student_id
+INNER JOIN table(edumate.get_enroled_students_form_run ('[[From Date=date]]')) gesfr on student.student_id=gesfr.student_id
+INNER JOIN form_run on gesfr.form_run_id=form_run.form_run_id
+INNER JOIN form on form_run.form_id=form.form_id 
+
     INNER JOIN class_teacher ON class_teacher.class_id = view_student_class_enrolment.class_id
     INNER JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
     INNER JOIN contact ON contact.contact_id = teacher.contact_id
-    
     WHERE view_student_class_enrolment.class_type_id = 2
-        AND view_student_class_enrolment.start_date <= '[[To Date=date]]'
+        AND view_student_class_enrolment.start_date <= '[[From Date=date]]'
         AND view_student_class_enrolment.end_date >= '[[To Date=date]]' -- lets take tutor as at last date
     ) ,
 
@@ -23,13 +28,13 @@ WITH student_tutor_class AS
     (
     SELECT
         student_tutor_class.class,
+        student_tutor_class.form,
         student_tutor_class.firstname||''||student_tutor_class.surname||
             (CASE WHEN student_tutor_class2.contact_id is not null AND student_tutor_class.contact_id != student_tutor_class2.contact_id 
                 THEN '&'||student_tutor_class2.firstname||''||student_tutor_class2.surname ELSE '' END) AS "TUTOR",
         student.student_number,
         contact.firstname,
         contact.surname,
-        form_run.form_run,
         daily_attendance.date_on,
         daily_attendance_status.daily_attendance_status AS "DAILY_STATUS",
         period.short_name AS "PERIOD",
@@ -37,9 +42,7 @@ WITH student_tutor_class AS
         COALESCE(absence_reason.absence_reason,'') AS "REASON",
         (CASE WHEN absence_verification.absence_verification is null OR absence_verification.absence_verification_id = 1 THEN '' ELSE absence_verification.absence_verification END) AS "VERIFICATION",
         ROW_NUMBER() OVER (PARTITION BY student.student_id, daily_attendance.date_on ORDER BY period.start_time)
-    
     FROM daily_attendance
-    
     INNER JOIN daily_attendance_status ON daily_attendance_status.daily_attendance_status_id = daily_attendance.daily_attendance_status_id
     INNER JOIN attendance ON attendance.student_id = daily_attendance.student_id
     INNER JOIN lesson ON lesson.lesson_id = attendance.lesson_id 
@@ -50,9 +53,6 @@ WITH student_tutor_class AS
     INNER JOIN period ON period.period_id = period_cycle_day.period_id 
     INNER JOIN student ON student.student_id = daily_attendance.student_id
     INNER JOIN contact ON contact.contact_id = student.contact_id
-	INNER JOIN student_form_run ON daily_attendance.student_id = student_form_run.student_id
-	INNER JOIN form_run ON student_form_run.form_run_id = form_run.form_run_id
-    
     -- get tutor(s)
     LEFT JOIN student_tutor_class ON student_tutor_class.student_id = student.student_id
         AND student_tutor_class.rownum = 1
@@ -66,28 +66,22 @@ WITH student_tutor_class AS
     LEFT JOIN absence_reason ON absence_reason.absence_reason_id = absentee_reason.absence_reason_id
     LEFT JOIN absence_verification ON absence_verification.absence_verification_id = absentee_reason.absence_verification_id
     WHERE daily_attendance.daily_attendance_status_id in (2,3,7,8,11,13,14,15) 
-        AND daily_attendance.date_on >= '[[From Date=date]]'
-        AND daily_attendance.date_on <= '[[To Date=date]]'
+        AND daily_attendance.date_on BETWEEN '[[From Date=date]]' AND '[[To Date=date]]'
     )
 
 SELECT
-    TO_CHAR(DATE('[[From Date=date]]'),'DD/MM/YY')||' to '||TO_CHAR(DATE('[[To Date=date]]'),'DD/MM/YY') AS "HEADING",
-    COALESCE(class,'')||' - '||COALESCE(tutor,'') AS "TUTOR_GROUP",
+    TO_CHAR(DATE('[[From Date=date]]'),'DD/MM/YY')||' - '||TO_CHAR(DATE('[[To Date=date]]'),'DD/MM/YY') AS "HEADING",
+  --  COALESCE(class,'')||' - '||COALESCE(tutor,'') AS "TUTOR_GROUP",
     (CASE WHEN rownum = 1 THEN student_number ELSE '' END) AS "STUDENT",
     (CASE WHEN rownum = 1 THEN firstname ELSE '' END) AS "FIRSTNAME",
-    (CASE WHEN rownum = 1 THEN surname ELSE '' END) AS "SURNAME",
+    (CASE WHEN rownum = 1 THEN surname||'<br>'||class ELSE '' END) AS "SURNAME",
     (CASE WHEN rownum = 1 THEN TO_CHAR(date_on,'DD/MM') ELSE '' END) AS "WHEN",
+    (CASE WHEN rownum = 1 THEN class ELSE '' END) AS "tutor_group",
+    form,
     period,
     attend_status,
     reason,
-    verification,
-    form_run
-
+    verification
 FROM student_unverifieds
-
-WHERE
-	student_unverifieds.period LIKE '%[[Period=query_list(SELECT DISTINCT period FROM period)]]%'
-		AND
-	student_unverifieds.form_run LIKE '[[Form=query_list(SELECT form_run.form_run FROM form_run WHERE form_run > TO_CHAR(YEAR(current date)) || ' %' ORDER BY form_run)]]'
-
-ORDER BY student_unverifieds.class, student_unverifieds.surname, student_unverifieds.firstname, student_unverifieds.date_on, student_unverifieds.rownum
+WHERE period like '%[[Period=query_list(SELECT DISTINCT period FROM period)]]%' AND Form LIKE '[[Form=table_list(form.form)]]' 
+ORDER BY  form,  student_unverifieds.surname, student_unverifieds.firstname, student_unverifieds.date_on, student_unverifieds.rownum
