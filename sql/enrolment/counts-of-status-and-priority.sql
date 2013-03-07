@@ -1,0 +1,39 @@
+WITH STATUSCAPTURE AS
+(
+	SELECT
+		STUDENT_ID,
+		CONTACT.SURNAME,
+		CONTACT.FIRSTNAME,
+		EXP_FORM_RUN,
+		CASE STUDENT_STATUS_ID
+			WHEN 1 THEN 'Application Cancelled'
+			WHEN 2 THEN 'Alumni'
+			WHEN 3 THEN 'Past Enrolment'
+			WHEN 4 THEN 'Returning Enrolment'
+			WHEN 5 THEN 'Current Enrolment'
+			WHEN 6 THEN 'Place Accepted'
+			WHEN 7 THEN 'Offered Place'
+			WHEN 8 THEN 'Interview Pending'
+			WHEN 9 THEN 'Wait Listed'
+			WHEN 10 THEN 'Application Received'
+			WHEN 11 THEN 'Information Sent'
+			WHEN 12 THEN 'Enquiry'
+			WHEN 13 THEN 'Interview Complete'
+			WHEN 14 THEN 'Expired Offer'
+			WHEN 15 THEN 'Expired Application'
+		END AS "STATUS",
+		PRIORITY.PRIORITY
+	
+	FROM TABLE(EDUMATE.GETALLSTUDENTSTATUS(current_date)) ALLKIDS
+	
+	INNER JOIN CONTACT ON CONTACT.CONTACT_ID = ALLKIDS.CONTACT_ID
+	INNER JOIN PRIORITY ON PRIORITY.PRIORITY_ID = ALLKIDS.PRIORITY_ID
+	
+	WHERE EXP_FORM_RUN > TO_CHAR(YEAR(current_date) + 1) || ' Year %'
+	
+	ORDER BY EXP_FORM_RUN ASC, ALLKIDS.PRIORITY_ID ASC, STATUS, SURNAME ASC
+)
+
+SELECT *
+
+FROM STATUSCAPTURE
