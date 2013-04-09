@@ -1,3 +1,8 @@
+/*
+'a weekly summative report of attendance and lates for the school.'
+To do: Counts, maybe period HR1 + HR2 only? Consult with Paul Hardwick
+*/
+
 SELECT
 	CONTACT.SURNAME,
 	CONTACT.FIRSTNAME,
@@ -23,4 +28,4 @@ WHERE
 		AND
 	VATTEND.ATTEND_STATUS_ID IN (3,4,5)
 
-ORDER BY ATTEND_STATUS ASC
+ORDER BY ATTEND_STATUS ASC, SURNAME ASC
