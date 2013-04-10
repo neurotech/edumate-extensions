@@ -1,5 +1,5 @@
 /*
-'a weekly summative report of attendance and lates for the school.'
+'A weekly summative report of attendance and lates for the school.'
 To do: Counts, maybe period HR1 + HR2 only? Consult with Paul Hardwick
 */
 
@@ -9,23 +9,36 @@ SELECT
 	DATE_ON,
 	LATE_TIME_IN,
 	ATTEND_STATUS.ATTEND_STATUS,
-	ABSENT_STATUS,
-	START_TIME,
-	END_TIME,
-	CLASS_ID,
-	EVENT_ID,
-	PERIOD_ID,
-	AM_PM_ID
+	CASE ABSENT_STATUS
+	  WHEN 0 THEN 'Not absent/Unexplained'
+	  WHEN 1 THEN 'Explained - Unverified'
+	  WHEN 2 THEN 'Explained - Verified'
+	  WHEN 3 THEN 'Explained - Verified (Sick)'
+	  WHEN 4 THEN 'Explained - Verified (Suspended)'
+	  WHEN 5 THEN 'Explained - Verified (Approved By Principal)'
+	  WHEN 6 THEN 'Explained - Verified (School Business)'
+	  WHEN 7 THEN 'Explained - Verified (Flexible Timetable)'
+	  WHEN 8 THEN 'Explained - Verified (External Education)'
+	  WHEN 9 THEN 'Explained - Verified (Exempt)'
+	END AS "ABSENT_STATUS",
+	CLASS.CLASS,
+	EVENT.EVENT,
+	PERIOD.PERIOD
 
 FROM VIEW_ATTENDANCE VATTEND
 
 INNER JOIN STUDENT ON STUDENT.STUDENT_ID = VATTEND.STUDENT_ID
 INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
 INNER JOIN ATTEND_STATUS ON ATTEND_STATUS.ATTEND_STATUS_ID = VATTEND.ATTEND_STATUS_ID
+INNER JOIN CLASS ON CLASS.CLASS_ID = VATTEND.CLASS_ID
+INNER JOIN PERIOD ON PERIOD.PERIOD_ID = VATTEND.PERIOD_ID
+LEFT JOIN EVENT ON EVENT.EVENT_ID = VATTEND.EVENT_ID
 
 WHERE
 	DATE_ON BETWEEN (CURRENT_DATE - 7 DAYS) AND CURRENT_DATE
 		AND
 	VATTEND.ATTEND_STATUS_ID IN (3,4,5)
+		AND
+	PERIOD IN ('Home Room 1', 'Home Room 2')
 
 ORDER BY ATTEND_STATUS ASC, SURNAME ASC
