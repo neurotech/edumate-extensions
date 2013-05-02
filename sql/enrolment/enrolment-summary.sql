@@ -1,4 +1,4 @@
-WITH raw_report AS 
+WITH raw_report AS
     (
     SELECT 
         academic_year.academic_year,
@@ -14,7 +14,8 @@ WITH raw_report AS
             ELSE '8 Missing Priority' END AS GROUP,
         CASE WHEN LEFT(priority.priority,3) IN ('CF ','IBS','A -') THEN '' ELSE stu_enrolment.rating END AS RATING,
         CASE WHEN getallstudentstatus.student_status_id IN (9,10) AND 
-            heard_about_school.heard_about_school is not null AND heard_about_school != 'WCO' THEN 1 ELSE 0 END AS WPA,    
+            heard_about_school.heard_about_school is not null AND heard_about_school != 'WCO' THEN 1 ELSE 0 END AS WPA,
+        CASE WHEN getallstudentstatus.student_status_id = 1 THEN 1 ELSE 0 END AS APPCANCEL,
         CASE WHEN getallstudentstatus.student_status_id IN (9,10) AND 
             (heard_about_school.heard_about_school is null OR heard_about_school = 'WCO') THEN 1 ELSE 0 END AS WAITING,
         CASE WHEN getallstudentstatus.student_status_id IN (8,13) THEN 1 ELSE 0 END AS INTERVIEW,
@@ -33,7 +34,7 @@ WITH raw_report AS
         LEFT JOIN priority ON priority.priority_id = getallstudentstatus.priority_id
         LEFT JOIN stu_enrolment ON stu_enrolment.student_id = getallstudentstatus.student_id
         LEFT JOIN heard_about_school ON heard_about_school.heard_about_school_id = stu_enrolment.heard_about_school_id
-    WHERE getallstudentstatus.student_status_id IN (10,9,8,7,6,4,13,14)
+    WHERE getallstudentstatus.student_status_id IN (10,9,8,7,6,4,13,14,1)
     ),
 
     raw_totals AS
@@ -43,6 +44,7 @@ WITH raw_report AS
         group,
         rating,
         SUM(CASE WHEN male = 1 THEN wpa ELSE 0 END) AS MWPA,
+        SUM(CASE WHEN male = 1 THEN appcancel ELSE 0 END) AS MAPPCANCEL,
         SUM(CASE WHEN male = 1 THEN waiting ELSE 0 END) AS MWAITING,
         SUM(CASE WHEN male = 1 THEN interview ELSE 0 END) AS MINTERVIEW,
         SUM(CASE WHEN male = 1 THEN offer ELSE 0 END) AS MOFFER,
@@ -50,6 +52,7 @@ WITH raw_report AS
         SUM(CASE WHEN male = 1 THEN accepted ELSE 0 END) AS MACCEPTED,
         SUM(male) AS MSUBTOTAL,
         SUM(CASE WHEN female = 1 THEN wpa ELSE 0 END) AS FWPA,
+        SUM(CASE WHEN female = 1 THEN appcancel ELSE 0 END) AS FAPPCANCEL,
         SUM(CASE WHEN female = 1 THEN waiting ELSE 0 END) AS FWAITING,
         SUM(CASE WHEN female = 1 THEN interview ELSE 0 END) AS FINTERVIEW,
         SUM(CASE WHEN female = 1 THEN offer ELSE 0 END) AS FOFFER,
@@ -70,6 +73,7 @@ WITH raw_report AS
         SUBSTR(group,3) AS GROUP,
         COALESCE(rating,'-') AS RATING,
         mwpa,
+        mappcancel,
         mwaiting,
         minterview,
         moffer,
@@ -78,6 +82,7 @@ WITH raw_report AS
         msubtotal,
         SUM(msubtotal) OVER (PARTITION BY academic_year,group) AS MTOTAL,
         fwpa,
+        fappcancel,
         fwaiting,
         finterview,
         foffer,
@@ -101,6 +106,7 @@ WITH raw_report AS
         '-- '||academic_year||' Totals --' AS GROUP,
         '' AS RATING,
         SUM(mwpa) AS MWPA,
+        SUM(mappcancel) as MAPPCANCEL,
         SUM(mwaiting) AS MWAITING,
         SUM(minterview) MINTERVIEW,
         SUM(moffer) AS MOFFER,
@@ -109,6 +115,7 @@ WITH raw_report AS
         SUM(msubtotal) AS MSUBTOTAL,
         SUM(msubtotal) AS MTOTAL,
         SUM(fwpa) AS FWPA,
+        SUM(fappcancel) as FAPPCANCEL,
         SUM(fwaiting) AS FWAITING,
         SUM(finterview) AS FINTERVIEW,
         SUM(foffer) AS FOFFER,
@@ -133,6 +140,7 @@ WITH raw_report AS
         CASE WHEN row_num = 1 THEN group ELSE '' END AS GROUP,
         rating,
         mwpa,
+        mappcancel,
         mwaiting,
         minterview,
         moffer,
@@ -141,6 +149,7 @@ WITH raw_report AS
         msubtotal,
         CASE WHEN row_num = 1 THEN mtotal ELSE null END AS MTOTAL,
         fwpa,
+        fappcancel,
         fwaiting,
         finterview,
         foffer,

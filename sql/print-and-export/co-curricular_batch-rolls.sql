@@ -1,7 +1,7 @@
 SELECT
 	TO_CHAR(DATE(start_date), 'DD/MM/YYYY') AS "Start Date",
 	TO_CHAR(DATE(end_date), 'DD/MM/YYYY') AS "End Date",
-	TO_CHAR(DATE(current_date), 'DD/MM/YYYY') AS "Today",
+  TO_CHAR(DATE('[[As at=date]]'), 'DD/MM/YYYY') AS "Today",
 	TO_CHAR(DATE(current_date), 'Month DD, YYYY') AS "PRINT_DATE",
 	class AS "CC_GROUP",
 	class_id,
@@ -16,11 +16,29 @@ FROM view_student_class_enrolment ccg
 	inner join contact on student.contact_id = contact.contact_id
 
 WHERE
-	class_type_id = 4
-		AND
-	start_date < current_date
-		AND
-	end_date > current_date
+	academic_year = TO_CHAR((current date), 'YYYY')
+	and
+	class_type_id = 1
+	and
+	(
+    course not like '07 %'
+    and
+    course not like '08 %'
+    and
+    course not like '09 %'
+    and
+    course not like '10 %'
+    and
+    course not like '11 %'
+    and
+    course not like '12 %'
+    and
+    course not like 'LearningSupport %'
+    and
+    course not like 'Saturday School %'
+    and
+    course != 'School-Based Apprenticeship'
+	)
 
 ORDER BY
 	CC_GROUP asc, STUDENT_SURNAME asc
