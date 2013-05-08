@@ -1,7 +1,7 @@
-SELECT
-	TO_CHAR(DATE(start_date), 'DD/MM/YYYY') AS "Start Date",
-	TO_CHAR(DATE(end_date), 'DD/MM/YYYY') AS "End Date",
-  TO_CHAR(DATE('[[As at=date]]'), 'DD/MM/YYYY') AS "Today",
+SELECT 
+	TO_CHAR(DATE(start_date), 'DD/MM/YYYY') AS "START_DATE",
+	TO_CHAR(DATE(end_date), 'DD/MM/YYYY') AS "END_DATE",
+  TO_CHAR(DATE('[[As at=date]]'), 'DD/MM/YYYY') AS "TODAY",
 	TO_CHAR(DATE(current_date), 'Month DD, YYYY') AS "PRINT_DATE",
 	class AS "CC_GROUP",
 	class_id,
@@ -12,13 +12,15 @@ SELECT
 	
 FROM view_student_class_enrolment ccg
 
-	inner join student on ccg.student_id = student.student_id
-	inner join contact on student.contact_id = contact.contact_id
+inner join student on ccg.student_id = student.student_id
+inner join contact on student.contact_id = contact.contact_id
 
 WHERE
 	academic_year = TO_CHAR((current date), 'YYYY')
 	and
 	class_type_id = 1
+	and
+	end_date > (current date)
 	and
 	(
     course not like '07 %'
@@ -40,5 +42,4 @@ WHERE
     course != 'School-Based Apprenticeship'
 	)
 
-ORDER BY
-	CC_GROUP asc, STUDENT_SURNAME asc
+ORDER BY	CC_GROUP asc, STUDENT_SURNAME asc

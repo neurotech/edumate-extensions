@@ -11,10 +11,10 @@ WITH student_tutor_class AS
         ROW_NUMBER() OVER (PARTITION BY view_student_class_enrolment.student_id ORDER BY class_teacher.is_primary DESC, view_student_class_enrolment.start_date DESC)
     FROM view_student_class_enrolment
 
-INNER JOIN student on view_student_class_enrolment.student_id=student.student_id
-INNER JOIN table(edumate.get_enroled_students_form_run ('[[From Date=date]]')) gesfr on student.student_id=gesfr.student_id
-INNER JOIN form_run on gesfr.form_run_id=form_run.form_run_id
-INNER JOIN form on form_run.form_id=form.form_id 
+    INNER JOIN student on view_student_class_enrolment.student_id=student.student_id
+    INNER JOIN table(edumate.get_enroled_students_form_run ('[[From Date=date]]')) gesfr on student.student_id=gesfr.student_id
+    INNER JOIN form_run on gesfr.form_run_id=form_run.form_run_id
+    INNER JOIN form on form_run.form_id=form.form_id 
 
     INNER JOIN class_teacher ON class_teacher.class_id = view_student_class_enrolment.class_id
     INNER JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
@@ -22,7 +22,7 @@ INNER JOIN form on form_run.form_id=form.form_id
     WHERE view_student_class_enrolment.class_type_id = 2
         AND view_student_class_enrolment.start_date <= '[[From Date=date]]'
         AND view_student_class_enrolment.end_date >= '[[To Date=date]]' -- lets take tutor as at last date
-    ) ,
+    ),
 
     student_unverifieds AS
     (
@@ -71,7 +71,7 @@ INNER JOIN form on form_run.form_id=form.form_id
 
 SELECT
     TO_CHAR(DATE('[[From Date=date]]'),'DD/MM/YY')||' - '||TO_CHAR(DATE('[[To Date=date]]'),'DD/MM/YY') AS "HEADING",
-  --  COALESCE(class,'')||' - '||COALESCE(tutor,'') AS "TUTOR_GROUP",
+    COALESCE(class,'')||' - '||COALESCE(tutor,'') AS "TUTOR_GROUP",
     (CASE WHEN rownum = 1 THEN student_number ELSE '' END) AS "STUDENT",
     (CASE WHEN rownum = 1 THEN firstname ELSE '' END) AS "FIRSTNAME",
     (CASE WHEN rownum = 1 THEN surname||'<br>'||class ELSE '' END) AS "SURNAME",
@@ -83,5 +83,5 @@ SELECT
     reason,
     verification
 FROM student_unverifieds
-WHERE period like '%[[Period=query_list(SELECT DISTINCT period FROM period)]]%' AND Form LIKE '[[Form=table_list(form.form)]]' 
-ORDER BY  form,  student_unverifieds.surname, student_unverifieds.firstname, student_unverifieds.date_on, student_unverifieds.rownum
+WHERE period like '%[[Period=query_list(SELECT DISTINCT period FROM period)]]%' AND form LIKE '[[Form=table_list(form.form)]]' 
+ORDER BY form, tutor_group, student_unverifieds.surname, student_unverifieds.firstname, student_unverifieds.date_on, student_unverifieds.rownum
