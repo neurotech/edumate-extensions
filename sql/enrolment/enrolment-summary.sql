@@ -28,7 +28,7 @@ WITH raw_report AS
     FROM table(edumate.getallstudentstatus(current_date)) 
         INNER JOIN contact ON contact.contact_id = getallstudentstatus.contact_id
         INNER JOIN form_run ON form_run.form_run_id = getallstudentstatus.exp_form_run_id
-           AND form_run.form_run = '[[Year=query_list(SELECT FORM_RUN FROM FORM_RUN INNER JOIN TIMETABLE ON TIMETABLE.TIMETABLE_ID = FORM_RUN.TIMETABLE_ID AND CURRENT_DATE BETWEEN TIMETABLE.COMPUTED_START_DATE - 10 YEARS AND TIMETABLE.COMPUTED_START_DATE WHERE FORM_RUN.FORM_ID = 9 ORDER BY TIMETABLE.COMPUTED_START_DATE)]]'
+           AND form_run.form_run = '[[Year=query_list(SELECT FORM_RUN FROM FORM_RUN INNER JOIN TIMETABLE ON TIMETABLE.TIMETABLE_ID = FORM_RUN.TIMETABLE_ID AND CURRENT_DATE BETWEEN TIMETABLE.COMPUTED_START_DATE - 30 YEARS AND TIMETABLE.COMPUTED_START_DATE WHERE FORM_RUN.FORM_ID = 9 ORDER BY TIMETABLE.COMPUTED_START_DATE)]]'
         INNER JOIN timetable ON timetable.timetable_id = form_run.timetable_id
         INNER JOIN academic_year ON academic_year.academic_year_id = timetable.academic_year_id
         LEFT JOIN priority ON priority.priority_id = getallstudentstatus.priority_id

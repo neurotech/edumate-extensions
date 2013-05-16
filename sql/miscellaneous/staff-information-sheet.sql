@@ -74,7 +74,6 @@ TRAINING_COURSES AS
 	SELECT
 		STAFF_NUMBER,
 		LISTAGG(DEETS, ', ') AS "COURSES"
-		--substr( xmlserialize( xmlagg( xmltext( concat( ', ', DEETS ) ) ) as varchar( 2048 ) ), 3 ) AS "COURSES"
 	
 	FROM STAFFBASE
 	
