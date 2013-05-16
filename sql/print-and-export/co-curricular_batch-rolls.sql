@@ -1,45 +1,28 @@
 SELECT 
-	TO_CHAR(DATE(start_date), 'DD/MM/YYYY') AS "START_DATE",
-	TO_CHAR(DATE(end_date), 'DD/MM/YYYY') AS "END_DATE",
+	TO_CHAR(DATE(START_DATE), 'DD/MM/YYYY') AS "START_DATE",
+	TO_CHAR(DATE(END_DATE), 'DD/MM/YYYY') AS "END_DATE",
   TO_CHAR(DATE('[[As at=date]]'), 'DD/MM/YYYY') AS "TODAY",
-	TO_CHAR(DATE(current_date), 'Month DD, YYYY') AS "PRINT_DATE",
-	class AS "CC_GROUP",
-	class_id,
-	ccg.student_id,
-	contact.firstname as "STUDENT_FIRSTNAME",
-	contact.surname as "STUDENT_SURNAME",
-	CONCAT(CONCAT('(', contact.preferred_name), ')') as "STUDENT_PREFERRED_NAME"
+	TO_CHAR(DATE(CURRENT DATE), 'Month DD, YYYY') AS "PRINT_DATE",
+	CCG.CLASS AS "CC_GROUP",
+  COURSE.CODE || '.' || CLASS.IDENTIFIER AS "TIMETABLE_CODE",
+	CONTACT.FIRSTNAME AS "STUDENT_FIRSTNAME",
+	CONTACT.SURNAME AS "STUDENT_SURNAME",
+	CONCAT(CONCAT('(', CONTACT.PREFERRED_NAME), ')') AS "STUDENT_PREFERRED_NAME"
 	
-FROM view_student_class_enrolment ccg
+FROM VIEW_STUDENT_CLASS_ENROLMENT CCG
 
-inner join student on ccg.student_id = student.student_id
-inner join contact on student.contact_id = contact.contact_id
+INNER JOIN STUDENT ON CCG.STUDENT_ID = STUDENT.STUDENT_ID
+INNER JOIN CONTACT ON STUDENT.CONTACT_ID = CONTACT.CONTACT_ID
+INNER JOIN CLASS ON CLASS.CLASS_ID = CCG.CLASS_ID
+INNER JOIN COURSE ON COURSE.COURSE_ID = CLASS.COURSE_ID
 
 WHERE
-	academic_year = TO_CHAR((current date), 'YYYY')
-	and
-	class_type_id = 1
-	and
-	end_date > (current date)
-	and
-	(
-    course not like '07 %'
-    and
-    course not like '08 %'
-    and
-    course not like '09 %'
-    and
-    course not like '10 %'
-    and
-    course not like '11 %'
-    and
-    course not like '12 %'
-    and
-    course not like 'LearningSupport %'
-    and
-    course not like 'Saturday School %'
-    and
-    course != 'School-Based Apprenticeship'
-	)
+	ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')
+	AND
+	CCG.CLASS_TYPE_ID = 1
+	AND
+	END_DATE > (CURRENT DATE)
+  AND
+  COURSE.CODE || '.' || CLASS.IDENTIFIER in ('CSALC.02A','CSART.02A','CSBOZ.02A','CSBAN.02A','CRBRL.02I','CRBRL.02J','CRBFB.02I','CRBFB.02J','CRBFB.02S','CSCHL.02A','CSDAN.02A','CSFOZ.02B','CSFOZ.02A','CSFTB.02A','CSFUT.02A','CSGYM.02A','CSHOZ.02A','CSLAF.02A','CSMUS.02D','CSMUS.02B','CSMUS.02C','CSMUS.02A','CSNTF.02A','CSOBM.02A','CSOTF.02A','CSOFR.02A','CSOHO.02A','CSOVB.02A','CSPHO.02A','CSRBW.02A','CRGNB.02I','CRGNB.02J','CRGNB.02S','CRGFB.02S','CSSAF.02C','CSSAF.02A','CSSAF.02B','CSSTF.02A','CSSTF.02B','CSTOZ.02A','CSTEN.02A','CSTEN.02B','CSTFR.02B','CSTFR.02A','CSTLB.02A','CSTNB.02A','CSVOZ.02A','CSYOG.02A')
 
-ORDER BY	CC_GROUP asc, STUDENT_SURNAME asc
+ORDER BY	CC_GROUP ASC, STUDENT_SURNAME ASC
