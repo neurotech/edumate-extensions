@@ -1,6 +1,7 @@
 /*
   To do:  - Refer to printed notes.
           - Research an accurate way of calculating days between a range i.e. (May 12 to May 15th is 4 days, not 3.)
+          - Check effective_start and end rendering (Example: Marie Ribeiro)
 */
 
 WITH YTD_RAW AS
@@ -14,7 +15,7 @@ WITH YTD_RAW AS
     TO_CHAR((TO_DATE), 'DD-MM-YYYY') AS "TO_DATE",
     CASE WHEN
       TO_CHAR((TO_DATE), 'DD-MM-YYYY') != TO_CHAR((FROM_DATE), 'DD-MM-YYYY')
-        THEN (DAYS (TO_DATE) - DAYS (FROM_DATE))
+        THEN ((DAYS (TO_DATE) - DAYS (FROM_DATE)) + 1)
         ELSE
           DECIMAL(ROUND((TO_CHAR((HOUR(TIME(TIME(TO_DATE)) - (TIME(FROM_DATE))) * 60) + MINUTE(TIME(TIME(TO_DATE)) - (TIME(FROM_DATE)))) / 480), 2), 31, 2) END AS "DAYS_ABSENT"
 
@@ -59,7 +60,7 @@ FN_RAW AS
     CASE WHEN TO_CHAR(TO_DATE, 'DD-MM-YYYY') > TO_CHAR(CURRENT_DATE, 'DD-MM-YYYY') THEN TO_CHAR((CURRENT_DATE), 'Month DD') ELSE TO_CHAR(TO_DATE, 'Month DD - HH:MM PM') END AS "EFFECTIVE_END",
     CASE WHEN
       TO_CHAR((TO_DATE), 'DD-MM-YYYY') != TO_CHAR((FROM_DATE), 'DD-MM-YYYY')
-        THEN (DAYS (TO_DATE) - DAYS (FROM_DATE))
+        THEN ((DAYS (TO_DATE) - DAYS (FROM_DATE)) + 1)
         ELSE (CASE
                 WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) <= 4 THEN 0.5
                 WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) > 4 THEN 1.0 END
