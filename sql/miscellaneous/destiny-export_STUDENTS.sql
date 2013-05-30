@@ -7,7 +7,7 @@ WITH GRAD_YEAR AS
   FROM VIEW_STUDENT_FORM_RUN
   
   GROUP BY STUDENT_ID
-)
+),
 
 SELECT
   STUDENT.STUDENT_NUMBER AS "DISTRICT_NO",
@@ -16,7 +16,57 @@ SELECT
   CONTACT.PREFERRED_NAME AS "NICKNAME",
   TO_CHAR(CONTACT.BIRTHDATE, 'DD/MM/YY') AS "BIRTHDATE",
   GENDER.GENDER,
-  CLASS.CLASS AS "HOMEROOM",
+  CASE CLASS.CLASS
+    WHEN '7 Brady' THEN '7 BRA'
+    WHEN '7 Cassidy' THEN '7 CAS'
+    WHEN '7 Caulfield' THEN '7 CAU'
+    WHEN '7 Delaney' THEN '7 DEL'
+    WHEN '7 Dwyer' THEN '7 DWY'
+    WHEN '7 McLaughlin' THEN '7 MCL'
+    WHEN '7 Mclaughlin' THEN '7 MCL'
+    WHEN '7 Vaughan' THEN '7 VAU'
+    WHEN '8 Brady' THEN '8 BRA'
+    WHEN '8 Cassidy' THEN '8 CAS'
+    WHEN '8 Caulfield' THEN '8 CAU'
+    WHEN '8 Delaney' THEN '8 DEL'
+    WHEN '8 Dwyer' THEN '8 DWY'
+    WHEN '8 McLaughlin' THEN '8 MCL'
+    WHEN '8 Mclaughlin' THEN '8 MCL'
+    WHEN '8 Vaughan' THEN '8 VAU'
+    WHEN '9 Brady' THEN '9 BRA'
+    WHEN '9 Cassidy' THEN '9 CAS'
+    WHEN '9 Caulfield' THEN '9 CAU'
+    WHEN '9 Delaney' THEN '9 DEL'
+    WHEN '9 Dwyer' THEN '9 DWY'
+    WHEN '9 McLaughlin' THEN '9 MCL'
+    WHEN '9 Mclaughlin' THEN '9 MCL'
+    WHEN '9 Vaughan' THEN '9 VAU'
+    WHEN '10 Brady' THEN '10 BRA'
+    WHEN '10 Cassidy' THEN '10 CAS'
+    WHEN '10 Caulfield' THEN '10 CAU'
+    WHEN '10 Delaney' THEN '10 DEL'
+    WHEN '10 Dwyer' THEN '10 DWY'
+    WHEN '10 McLaughlin' THEN '10 MCL'
+    WHEN '10 Mclaughlin' THEN '10 MCL'
+    WHEN '10 Vaughan' THEN '10 VAU'
+    WHEN '11 Brady' THEN '11 BRA'
+    WHEN '11 Cassidy' THEN '11 CAS'
+    WHEN '11 Caulfield' THEN '11 CAU'
+    WHEN '11 Delaney' THEN '11 DEL'
+    WHEN '11 Dwyer' THEN '11 DWY'
+    WHEN '11 McLaughlin' THEN '11 MCL'
+    WHEN '11 Mclaughlin' THEN '11 MCL'
+    WHEN '11 Vaughan' THEN '11 VAU'
+    WHEN '12 Brady' THEN '12 BRA'
+    WHEN '12 Cassidy' THEN '12 CAS'
+    WHEN '12 Caulfield' THEN '12 CAU'
+    WHEN '12 Delaney' THEN '12 DEL'
+    WHEN '12 Dwyer' THEN '12 DWY'
+    WHEN '12 McLaughlin' THEN '12 MCL'
+    WHEN '12 Mclaughlin' THEN '12 MCL'
+    WHEN '12 Vaughan' THEN '12 VAU'
+    ELSE NULL
+  END AS "HOMEROOM",
   'B' || STUDENT.STUDENT_NUMBER || '1844' AS "BARCODE",
   CONTACT.EMAIL_ADDRESS AS "EMAIL_1",
   VCHA.ADDRESS1 || VCHA.ADDRESS2 AS "ADDRESS1",
