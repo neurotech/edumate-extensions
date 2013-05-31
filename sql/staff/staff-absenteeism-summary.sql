@@ -1,8 +1,3 @@
-/*
-  To do:  - Refer to printed notes.
-          - Engineer a way to turn hour(s) into periods (2 hours = 2.2 periods)
-*/
-
 WITH YTD_RAW AS
 (
   SELECT
@@ -48,7 +43,7 @@ YTD_SUM AS
     SUM(DAYS_ABSENT_YTD) AS "TOTAL_DAYS_ABSENT_FOR_YEAR"
   
   FROM YTD_DATA
-  
+
   GROUP BY STAFF_ID
 ),
 
@@ -62,7 +57,6 @@ FN_RAW AS
     CASE WHEN TO_CHAR(TO_DATE, 'DD-MM-YYYY') > TO_CHAR(CURRENT_DATE, 'DD-MM-YYYY') THEN TO_CHAR((CURRENT_DATE), 'Month DD') ELSE TO_CHAR(TO_DATE, 'Month DD - HH:MM PM') END AS "EFFECTIVE_END",
     CASE WHEN
       TO_CHAR((TO_DATE), 'DD-MM-YYYY') != TO_CHAR((FROM_DATE), 'DD-MM-YYYY')
-        --THEN ((DAYS (TO_DATE) - DAYS (FROM_DATE)) + 1)
         THEN (
           (DAYS(CASE WHEN TO_CHAR(TO_DATE, 'DD-MM-YYYY') > TO_CHAR((CURRENT_DATE), 'DD-MM-YYYY') THEN (CURRENT_DATE) ELSE TO_DATE END))
             -
@@ -87,6 +81,48 @@ FN_RAW AS
     TO_CHAR(FROM_DATE, 'YYYY') = TO_CHAR(CURRENT_DATE, 'YYYY')
 
   ORDER BY SURNAME, SORT_ORDER
+),
+
+AWAY_FROM_CLASS AS
+(
+  SELECT
+      AFC.STAFF_ID,
+      CASE WHEN
+        TO_CHAR((TO_DATE), 'DD-MM-YYYY') != TO_CHAR((FROM_DATE), 'DD-MM-YYYY')
+          THEN (
+            (DAYS(CASE WHEN TO_CHAR(TO_DATE, 'DD-MM-YYYY') > TO_CHAR((CURRENT_DATE), 'DD-MM-YYYY') THEN (CURRENT_DATE) ELSE TO_DATE END))
+              -
+            (DAYS(CASE WHEN TO_CHAR(FROM_DATE, 'DD-MM-YYYY') < TO_CHAR((CURRENT_DATE - 14 DAYS), 'DD-MM-YYYY') THEN (CURRENT_DATE - 14 DAYS) ELSE FROM_DATE END))
+              + 1
+          )
+          ELSE (CASE
+                  WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) <= 3 THEN 0.25
+                  WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) = 4 THEN 0.5
+                  WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) BETWEEN 4 AND 6 THEN 0.75
+                  WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) > 4 THEN 1.0 END)
+      END AS "AWAY_FROM_CLASS"
+  
+  FROM STAFF_AWAY AFC
+  
+  -- Limit to report scope, and AWAY_FROM_CLASS by Away Reasons of:
+  --  * Sick
+  --  * PDN
+  --  * Annual Leave
+  --  * Professional Development
+  --  * Time In-Lieu
+  --  * Leave
+  --  * Meeting
+  --  * Late
+  --  * School Duties
+  --  * HSC Marking
+  --  * Funded Professional Development
+  --  * Leave Without Pay
+  WHERE
+    AWAY_REASON_ID IN (1,2,3,5,6,7,9,10,25,49,74,75)
+      AND
+    FROM_DATE <= CURRENT_DATE AND TO_DATE > (CURRENT_DATE - 14 DAYS)
+      AND
+    TO_CHAR(FROM_DATE, 'YYYY') = TO_CHAR(CURRENT_DATE, 'YYYY')
 )
 
 SELECT
@@ -111,5 +147,3 @@ INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STAFF.CONTACT_ID
 INNER JOIN AWAY_REASON ON AWAY_REASON.AWAY_REASON_ID = FN_RAW.AWAY_REASON_ID
 
 INNER JOIN YTD_SUM ON YTD_SUM.STAFF_ID = FN_RAW.STAFF_ID
-
---WHERE FN_RAW.STAFF_ID = 391
