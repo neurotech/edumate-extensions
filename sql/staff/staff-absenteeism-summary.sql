@@ -3,10 +3,6 @@ WITH STAFF_AWAY_DATA AS (
 /* ============================================================================
    Get staff IDs (As well as away reason IDs, from date and to date) of staff
    who have an away within the scope of 'two weeks to today'.
-   
-   Notes/Questions:
-     - Next goal:
-        * Adjust SXW to accept the table returned by this query
    ========================================================================= */
 
 SELECT
