@@ -1,5 +1,9 @@
+-- To do: Refactor to query attendance data for each form.
+-- (Seperate WITH for each form - 'SEVEN_ATTENDANCE_DATA', 'EIGHT_ATTENDANCE_DATA', etc.)
+
 WITH
   -- Table: Reporting Periods - Start and End Dates
+  -- NOTE: These will need to be turned into Edumate's [[Date picker]] style selectors.
   REPORT_DATES AS (
     SELECT
       (DATE('2013-01-31')) AS "SEVEN_START",
