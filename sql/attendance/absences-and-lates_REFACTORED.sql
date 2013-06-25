@@ -1,6 +1,6 @@
 WITH REPORT_DATES AS (
 -- Table: Reporting Periods - Start and End Dates
--- NOTE: These will need to be turned into Edumate's [[Date picker]] style selectors.
+-- NOTE: These will need to be turned into Edumate's [[Date picker]] style selectors before launch.
 
   SELECT
     TO_CHAR((CURRENT DATE), 'YYYY') AS "CURRENT_YEAR",
