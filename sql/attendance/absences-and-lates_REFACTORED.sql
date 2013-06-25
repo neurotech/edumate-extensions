@@ -1,3 +1,6 @@
+-- Notes:
+-- Consider using UNION to make a 'STUDENT_ATTENDANCE_DATA' mega table that unites all '_ATTENDANCE_DATA' WITHs.
+
 WITH REPORT_VARS AS (
 -- Table: Reporting Periods - Start and End Dates
 -- NOTE: These will need to be turned into Edumate's [[Date picker]] style selectors before launch.
