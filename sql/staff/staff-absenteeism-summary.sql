@@ -1,9 +1,11 @@
 WITH STAFF_AWAY_DATA AS (
 
-/* ============================================================================
-   Get staff IDs (As well as away reason IDs, from date and to date) of staff
-   who have an away within the scope of 'two weeks to today'.
-   ========================================================================= */
+/*
+  ==============================================================================
+    Get staff IDs (As well as away reason IDs, from date and to date) of staff
+    who have an away within the scope of 'two weeks to today'.
+  ==============================================================================
+*/
 
 SELECT
   ROW_NUMBER() OVER (PARTITION BY SA.STAFF_ID) AS "SORT_ORDER",
