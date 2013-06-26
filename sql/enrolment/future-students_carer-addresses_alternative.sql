@@ -6,9 +6,12 @@ WITH future_students_offered_addresses AS
 		gender.gender,
 		exp_form_run,
 		CASE student_status_id
+		  WHEN 6 THEN 'Place Accepted'
+		  WHEN 7 THEN 'Offered Place'
 			WHEN 8 THEN 'Interview Pending'
 			WHEN 9 THEN 'Wait Listed'
 			WHEN 10 THEN 'Application Received'
+			WHEN 14 THEN 'Expired Offer'
 			ELSE 'Other'
 		END AS "STATUS",
 		priority.priority,
@@ -43,9 +46,12 @@ WITH future_students_offered_addresses AS
     LEFT JOIN contact carer4 on vslc.carer4_contact_id = carer4.contact_id
 	
 	WHERE
+	  student_status_id = '6' OR
+	  student_status_id = '7' OR
 		student_status_id = '8' OR
 		student_status_id = '9' OR
-		student_status_id = '10'
+		student_status_id = '10' OR
+		student_status_id = '14'
 	
 	ORDER BY
 		exp_form_run ASC, surname ASC
