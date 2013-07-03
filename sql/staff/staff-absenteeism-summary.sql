@@ -43,7 +43,8 @@ SELECT
       the date of the end of the report scope.
     * If the 'day' portion of the FROM and TO date records are the same, minus
       the 'hour' portion of the FROM date from the 'hour' portion of the TO
-      date to calcuate time away in hours as a fraction of one (1.0) day.
+      date and divide by 8.00 (assumed 8 hour day) to calcuate time away in
+      hours as a fraction of one (1.0) day.
 */
   CASE WHEN
     TO_CHAR((FROM_DATE), 'DD') != TO_CHAR((TO_DATE), 'DD')
@@ -62,10 +63,10 @@ SELECT
       ))
     )
   ELSE (CASE
-    WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) <= 3 THEN 0.25
-    WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) = 4 THEN 0.5
-    WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) BETWEEN 4 AND 6 THEN 0.75
-    WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) > 4 THEN 1.0 END)
+    WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) = 22 THEN 1.00
+    WHEN CAST(HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) / 8.00 AS DECIMAL(3,2)) = 0.00 THEN
+    CAST(MINUTE(TIME(TO_DATE) - TIME(FROM_DATE)) / 480.00 AS DECIMAL(3,2))
+    ELSE CAST(HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) / 8.00 AS DECIMAL(3,2)) END)
   END AS "DAYS_ABSENT"
 
 FROM STAFF_AWAY SA
@@ -95,12 +96,12 @@ YTD_RAW AS
           END)
         ))
       )
-    ELSE (CASE
-      WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) <= 3 THEN 0.25
-      WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) = 4 THEN 0.5
-      WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) BETWEEN 4 AND 6 THEN 0.75
-      WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) > 4 THEN 1.0 END)
-    END AS "DAYS_ABSENT"
+  ELSE (CASE
+    WHEN HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) = 22 THEN 1.00
+    WHEN CAST(HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) / 8.00 AS DECIMAL(3,2)) = 0.00 THEN
+    CAST(MINUTE(TIME(TO_DATE) - TIME(FROM_DATE)) / 480.00 AS DECIMAL(3,2))
+    ELSE CAST(HOUR(TIME(TO_DATE) - TIME(FROM_DATE)) / 8.00 AS DECIMAL(3,2)) END)
+  END AS "DAYS_ABSENT"
   
   FROM STAFF_AWAY SA
   
@@ -117,7 +118,7 @@ YTD_RAW AS
 YTD_SUM AS (
   SELECT
     YTD_RAW.STAFF_ID,
-    SUM(CASE WHEN YTD_RAW.DAYS_ABSENT >= 1.0 THEN 1 ELSE 0 END) AS "DAYS_ABSENT_THIS_YEAR"
+    SUM(YTD_RAW.DAYS_ABSENT) AS "DAYS_ABSENT_THIS_YEAR"
   
   FROM YTD_RAW
   
