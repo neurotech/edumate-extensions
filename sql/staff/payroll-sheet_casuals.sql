@@ -1,5 +1,6 @@
 -- 14-day snapshot of what casuals used for what teacher when.
--- Finished on Friday 5th July 2013, 3:25pm
+-- To do: Include start and endtimes with a view to calculating half or full day
+-- (<= 4 is half day, > 4 and <= 8 is full day)
 
 WITH CASUAL_BLOB_DAY_ONE AS
 (
@@ -297,8 +298,7 @@ CASUALS AS (
 )
 
 SELECT
-  SORT_ORDER,
-  REPLACEMENT,
+  (CASE WHEN CASUALS.SORT_ORDER = 1 THEN REPLACEMENT ELSE NULL END) AS "REPLACEMENT",
   DATE_ON,
   PERIOD,
   CONTACT.FIRSTNAME || ' ' || CONTACT.SURNAME AS "ORIGINAL_TEACHER"
