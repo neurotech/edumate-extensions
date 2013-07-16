@@ -13,7 +13,8 @@ STAFF_AWAY_DATA AS (
 /*
   ==============================================================================
     Get staff IDs (As well as away reason IDs, from date and to date) of staff
-    who have an away within the scope of 'two weeks to today'.
+    who have an away within the scope of REPORT_START to REPORT_END in
+    REPORT_VARS.
   ==============================================================================
 */
 
