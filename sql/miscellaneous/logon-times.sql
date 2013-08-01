@@ -3,10 +3,7 @@ SELECT
   CONTACT.SURNAME AS "Surname",
   ET.EMPLOYMENT_TYPE AS "Employment Type",
   SESSION_GENERATOR.START_DATE AS "Logon Date/Time",
-  (CASE
-    WHEN SESSION_GENERATOR.IP_ADDRESS LIKE '192.168.%' THEN 'Rosebank Network'
-    ELSE 'Off-site Network' END
-  ) AS "Logon Source"
+  (CASE WHEN SESSION_GENERATOR.IP_ADDRESS LIKE '192.168.%' THEN 'Rosebank Network' ELSE 'Off-site Network' END) AS "Logon Source"
   
 
 FROM SESSION_GENERATOR
