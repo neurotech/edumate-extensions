@@ -49,11 +49,11 @@ WITH STAFF_LIST AS
       AND
     STAFF.STAFF_ID != '1'
       AND
-    SE.START_DATE <= current_date
+    SE.START_DATE <= CURRENT DATE
       AND
     SE.END_DATE IS NULL
       OR
-    SE.END_DATE > current_date
+    SE.END_DATE > CURRENT DATE
 ),
 
 GRAD_YEAR AS
