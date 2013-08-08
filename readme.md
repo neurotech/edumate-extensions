@@ -1,5 +1,5 @@
 # edumate extensions
-A set of custom reports for the Edumate school administration system.
+A collection of custom reports for the Edumate school administration system.
 
 ## Overview of Reports
 
