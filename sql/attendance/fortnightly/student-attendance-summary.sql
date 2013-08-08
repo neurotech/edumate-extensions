@@ -1,3 +1,15 @@
+-- Student Attendance Summary
+
+-- A summative report that lists student attendance statistics over a fortnight, as well as year to date.
+-- This report calculates explained/unexplained absences/lates, as well as cumulative absences/lates as an average per fortnight.
+
+-- Results are grouped by home room, and then sorted by *'Absences YTD'*
+
+-- This report pipes it's results to a SXW template (attendance/student-attendance-summary.sxw) which is emailed to
+-- Year Coordinators as well as Pastoral Assistants every fortnight on Friday night.
+
+
+-- Generic REPORT_VARS subquery for DRYness
 WITH REPORT_VARS AS (
   SELECT
     TO_CHAR((CURRENT DATE), 'YYYY') AS "CURRENT_YEAR",
@@ -8,6 +20,7 @@ WITH REPORT_VARS AS (
   FROM SYSIBM.SYSDUMMY1
 ),
 
+-- Grabs all relevant attendance data ranging from the start of the academic year to the Report To date variable.
 STUDENT_ATTENDANCE_DATA AS (
   SELECT DISTINCT
     REPORT_VARS.REPORT_END,
@@ -35,6 +48,8 @@ STUDENT_ATTENDANCE_DATA AS (
     )
 ),
 
+-- Contains the fortnight calculator, which returns an integer that is the number of fortnights passed for the year to date.
+-- SUMs the number of *school* days passed since the Report To date variable, divides by 10 (2 * 5-day school weeks)
 ABSENCES_LATES_COUNTS AS (
   SELECT
     SAD.STUDENT_ID,
@@ -48,6 +63,7 @@ ABSENCES_LATES_COUNTS AS (
     INNER JOIN TERM ON TERM.TERM_ID = GTRD.TERM_ID
     WHERE GTRD.DAY_INDEX NOT IN (888, 999)
     ) AS "DIFF",
+    -- Conditional SUMs to calcuate total instances of fortnight, explained YTD, unexplained YTD, and total YTD absences/lates.
     SUM(CASE WHEN SAD.DATE_ON BETWEEN SAD.REPORT_FN_START AND SAD.REPORT_END AND (SAD.AM IN (2,3,4,5,6,7) AND SAD.PM IN (2,3,4,5,6,7)) THEN 1 ELSE 0 END) AS "FORTNIGHT_ABSENCES",
     SUM(CASE WHEN SAD.AM IN (3,4,5,6) AND SAD.PM IN (3,4,5,6) THEN 1 ELSE 0 END) AS "EXPLAINED_ABSENCES",
     SUM(CASE WHEN SAD.AM IN (2,7) AND SAD.PM IN (2,7) THEN 1 ELSE 0 END) AS "UNEXPLAINED_ABSENCES",
@@ -64,6 +80,7 @@ ABSENCES_LATES_COUNTS AS (
 )
 
 SELECT
+  -- FN is used in the footer of the template
   (CASE WHEN ROW_NUMBER() OVER (PARTITION BY FORM_RUN.FORM_RUN) = 1 THEN ALC.DIFF ELSE NULL END) AS "FN",
   STUDENT.STUDENT_NUMBER AS "Lookup Code",
   CONTACT.FIRSTNAME AS "First Name",
@@ -75,6 +92,7 @@ SELECT
   ALC.EXPLAINED_ABSENCES AS "Explained Absences YTD",
   ALC.UNEXPLAINED_ABSENCES AS "Unexplained Absences YTD",
   ALC.ABSENCES_YTD AS "Absences YTD",
+  -- Cumulative Absences and Lates are (Absences for the year to date / Number of termly fortnights passed for the year to date)
   CAST((CAST(ALC.ABSENCES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "Cumulative Absences (Average)",
   ALC.EXPLAINED_LATES AS "Explained Lates YTD",
   ALC.UNEXPLAINED_LATES AS "Unexplained Lates YTD",
@@ -86,6 +104,7 @@ SELECT
 FROM STUDENT
 
 INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
+-- Only join the lowest form run. This fixes students who are in two forms appearing in two forms.
 INNER JOIN FORM_RUN ON FORM_RUN.FORM_RUN_ID =
 (
     SELECT FORM_RUN.FORM_RUN_ID

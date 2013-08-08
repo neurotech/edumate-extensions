@@ -1,3 +1,7 @@
+-- Current Students - House Information
+
+-- A list of all currently enrolled students with their form run, first name, surname and house.
+
 SELECT
 	form_run.form_run,
 	contact.firstname,

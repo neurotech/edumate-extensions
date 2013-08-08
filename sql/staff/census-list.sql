@@ -1,3 +1,7 @@
+-- Census - Staff List
+
+-- A list of current staff information for census.
+
 WITH STAFFBASE AS
 (
 	SELECT
@@ -55,6 +59,7 @@ QUALS AS
 (
 	SELECT DISTINCT
 		STAFF_NUMBER,
+		-- Concats qualifications into one record
 		substr( xmlserialize( xmlagg( xmltext( concat( ', ', QUALS ) ) ) as varchar( 2048 ) ), 3 ) AS "QUALIFICATIONS"
 	
 	FROM STAFFBASE

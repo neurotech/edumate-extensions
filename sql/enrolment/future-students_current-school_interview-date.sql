@@ -1,3 +1,7 @@
+-- Future Students by Academic Year
+
+-- This report presents the following information: Surname, Firstname, Expected Form Run, Status, Current School, and Next Interview Date.
+
 SELECT
 	CONTACT.SURNAME,
 	CONTACT.FIRSTNAME,

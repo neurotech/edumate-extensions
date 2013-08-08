@@ -1,3 +1,8 @@
+-- Co-Curricular Batch Rolls
+
+-- Provides the Co-Curricular Coordinator and the Printery an easy way to produce pre-class and post-class rolls for all Co-Curricular groups for a given date.
+-- Feeds to (attendance/co-curricular_batch-rolls.sxw)
+
 SELECT 
 	TO_CHAR(DATE(START_DATE), 'DD/MM/YYYY') AS "START_DATE",
 	TO_CHAR(DATE(END_DATE), 'DD/MM/YYYY') AS "END_DATE",
@@ -8,6 +13,7 @@ SELECT
 	CONTACT.FIRSTNAME AS "STUDENT_FIRSTNAME",
 	CONTACT.SURNAME AS "STUDENT_SURNAME",
 	CONCAT(CONCAT('(', CONTACT.PREFERRED_NAME), ')') AS "STUDENT_PREFERRED_NAME",
+	-- Hack to generate rooms for wet weather
   (CASE
     WHEN COURSE.CODE || ' ' || CLASS.IDENTIFIER = 'CRBAF 03I' THEN '16'
     WHEN COURSE.CODE || ' ' || CLASS.IDENTIFIER = 'CRBAF 03J' THEN '16'
@@ -64,6 +70,7 @@ INNER JOIN COURSE ON COURSE.COURSE_ID = CLASS.COURSE_ID
 WHERE
 	ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')
   AND
+  -- Another hack to get around the issue of Co-Curricular classes set as 'Normal' instead of 'Co-curricular'
   COURSE.CODE || ' ' || CLASS.IDENTIFIER IN ('CRBAF 03I','CRBAF 03J','CRGBB 03I','CRGBB 03J','CRGBB 03S','CRGSB 03S','CRGSC 03I','CRGSC 03J','CSALC 03A','CSART 03A','CSCHL 03A','CSDAN 03A','CSFOZ 03A','CSFTB 03A','CSFTF 03A','CSFUT 03A','CSGYM 03A','CSHOZ 03A','CSLSC 03A','CSNTF 03A','CSOFR 03A','CSOHO 03A','CSOZV 03A','CSPHO 03A','CSRBW 03A','CSSAF 03A','CSSCO 03A','CSSFR 03A','CSSFR 03B','CSSTF 03A','CSSTF 03B','CSSTF 03C','CSSTF 03D','CSSTF 03E','CSTEN 03A','CSTEN 03B','CSTFR 03A','CSTNB 03A','CSTOZ 03A','CSTSC 03A','CSVOZ 03A','CSYOG 03A')
 
 ORDER BY	CC_GROUP ASC, STUDENT_SURNAME ASC

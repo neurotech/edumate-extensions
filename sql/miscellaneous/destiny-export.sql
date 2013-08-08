@@ -1,3 +1,7 @@
+-- Destiny Export
+
+-- Exports relevant data to a CSV with fields named to match Destiny's requirements.
+
 WITH STAFF_LIST AS
 (
   SELECT

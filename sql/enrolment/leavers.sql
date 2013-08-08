@@ -1,3 +1,8 @@
+-- Leavers - Last Year and This Year
+
+-- A list of all students who have left the school last year and this year to date.
+-- (Fields: Lookup Code, Surname, Firstname, Last Form Run, End Date, Student Status, Next School, Reason Left)
+
 SELECT
     STUDENT_NUMBER AS "LOOKUP_CODE",
     CONTACT.SURNAME,

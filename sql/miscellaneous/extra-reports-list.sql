@@ -1,3 +1,7 @@
+-- Extra Reports
+
+-- A list of students who have carers that don't live with them, but are flagged to receive mail, and thus, a report.
+
 SELECT
   CONTACT.FIRSTNAME,
   CONTACT.SURNAME,

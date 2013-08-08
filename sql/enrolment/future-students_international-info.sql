@@ -1,3 +1,12 @@
+-- Future Students - International Information (future-students_international-info.sql)
+
+-- This report is a modified clone of the 'Accepted Students by Year Group' report.
+
+-- It has been modified to list all future students with a country of birth other than Australia,
+-- as well as students whose first language is anything other than English.
+
+-- It also lists what school they're currently attending.
+
 WITH future_students AS
 (
 	SELECT

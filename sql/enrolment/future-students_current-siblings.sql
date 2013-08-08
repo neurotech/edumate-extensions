@@ -1,3 +1,7 @@
+-- Future Students - Current Siblings
+
+-- A list of future students who have siblings that are currently enrolled at the school.
+
 WITH future_students_current_siblings AS
 (
 	SELECT

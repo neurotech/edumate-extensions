@@ -1,9 +1,19 @@
+-- Census - Homeroom Attendance
+
+-- Produces tabular attendance data for the 'Home Room 1' period of a date.
+-- The results are grouped by homeroom and then passed to a template (**attendance/census_homeroom-attendance.sxw**).
+-- To be printed and distributed amongst homeroom teachers for signing.
+
 SELECT
   CLASS.CLASS,
   PERIOD.PERIOD,
   CONTACT.SURNAME,
   CONTACT.FIRSTNAME,
-  (CASE WHEN CONTACT.PREFERRED_NAME IS NULL THEN NULL ELSE '(' END) || CONTACT.PREFERRED_NAME || (CASE WHEN CONTACT.PREFERRED_NAME IS NULL THEN NULL ELSE ')' END) AS "PREFERRED_NAME",
+  -- Conditional preferred name - only renders parentheses when data exists in PREFERRED_NAME
+  (CASE WHEN CONTACT.PREFERRED_NAME IS NULL THEN NULL ELSE '(' END) ||
+    CONTACT.PREFERRED_NAME ||
+    (CASE WHEN CONTACT.PREFERRED_NAME IS NULL THEN NULL ELSE ')' END)
+  AS "PREFERRED_NAME",
   GENDER.GENDER,
   ATS.ATTEND_STATUS
 
@@ -21,6 +31,6 @@ INNER JOIN STUDENT ON STUDENT.STUDENT_ID = ATTENDANCE.STUDENT_ID
 INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
 INNER JOIN GENDER ON GENDER.GENDER_ID = CONTACT.GENDER_ID
 
-WHERE DATE(DATE_ON) = DATE(CURRENT DATE)
+WHERE DATE(DATE_ON) = DATE('[[Report on=date]]')
 
 ORDER BY CLASS.CLASS_ID, CONTACT.SURNAME

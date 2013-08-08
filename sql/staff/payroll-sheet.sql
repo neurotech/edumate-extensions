@@ -1,3 +1,8 @@
+-- Rosebank Staff Payroll Sheet
+
+-- A fortnightly report to assist the Dean of Administration and the Finance team with budget management.
+-- This report lists all staff absences as well as the dates that casual teachers worked for a given fortnight.
+
 WITH REPORT_VARS AS (
   SELECT
     TO_CHAR((CURRENT DATE), 'YYYY') AS "CURRENT_YEAR",

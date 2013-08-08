@@ -1,3 +1,7 @@
+-- Marked Rolls Log
+
+-- A log of who marked what class roll and when for a given date and period.
+
 WITH MAIN AS
 (
   SELECT

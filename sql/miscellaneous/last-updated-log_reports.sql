@@ -1,3 +1,7 @@
+-- Last Updated Log - Reports
+
+-- A log of summation reports and who was the last to update them.
+
 WITH EDITS AS
 (
 	SELECT

@@ -1,3 +1,8 @@
+-- Unverified Absences by Form (Modified)
+
+-- This is a fork of Edumate's 'Unverified Absences by Tutor' report.
+-- It allows the user to extract the unverified absence data for a single form.
+
 WITH student_tutor_class AS
     (
     SELECT

@@ -1,13 +1,14 @@
+-- Staff Absenteeism Summary
+
+-- A summative report that tabulates counts of absences by reason for all current staff members.
+-- Feeds to (staff/staff-absenteeism_summary.sxw)
+
 WITH REPORT_VARS AS (
   SELECT
     TO_CHAR((CURRENT DATE), 'YYYY') AS "CURRENT_YEAR",
     (SELECT START_DATE FROM TERM WHERE TERM = 'Term 1' AND START_DATE LIKE (TO_CHAR((CURRENT DATE), 'YYYY')) || '-%%-%%' FETCH FIRST 1 ROW ONLY) AS "YEAR_START",
     (DATE('[[Report From=date]]')) AS "REPORT_START",
     (DATE('[[Report To=date]]')) AS "REPORT_END"
-/*
-    (DATE('2013-01-31')) AS "REPORT_START",
-    (DATE(CURRENT DATE)) AS "REPORT_END"
-*/
 
   FROM SYSIBM.SYSDUMMY1
 ),
@@ -17,6 +18,7 @@ ALL_STAFF AS (
     STAFF.STAFF_NUMBER AS "LOOKUP_CODE",
     CONTACT.CONTACT_ID,
     STAFF.STAFF_ID,
+    -- Referenced by the template 
     (CASE WHEN SE.START_DATE > REPORT_VARS.REPORT_START THEN TO_CHAR((SE.START_DATE), 'DD Mon') ELSE NULL END) AS "RECENT_STAFF"
 
   FROM STAFF

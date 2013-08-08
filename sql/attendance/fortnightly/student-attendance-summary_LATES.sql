@@ -7,12 +7,6 @@ WITH REPORT_VARS AS (
     ('[[Report To Date=date]]') AS "REPORT_END",
     (DATE('[[Report To Date=date]]') - 14 DAYS) AS "REPORT_FN_START"
 
-/*
-    (DATE((CURRENT DATE) - 21 DAYS)) AS "REPORT_START",
-    (DATE(CURRENT DATE)) AS "REPORT_END",
-    (DATE(CURRENT DATE) - 14 DAYS) AS "REPORT_FN_START"
-*/
-
   FROM SYSIBM.SYSDUMMY1
 ),
 

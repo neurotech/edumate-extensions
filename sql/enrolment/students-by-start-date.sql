@@ -1,3 +1,7 @@
+-- Students by Start Date
+
+-- A filterable list of students by start date.
+
 SELECT
   GASS.START_DATE,
   STUDENT.STUDENT_NUMBER AS "LOOKUP_CODE",

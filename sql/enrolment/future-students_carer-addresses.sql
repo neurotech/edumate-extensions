@@ -1,3 +1,21 @@
+-- Future Students (Accepted/Interview Pending/Wait Listed/Application Received) - Addresses
+
+-- This report is a modified clone of the 'future-students_carer-addresses.sql' report.
+-- It will render the following information for a specified form & year:
+
+-- 1. Student Firstname and Lastname
+-- 2. Gender, Gender Counts, Total Student Counts
+-- 3. Expected Form
+-- 4. Status
+-- 5. Priority
+-- 6. Student Street, Suburb, Country
+-- 7. Parent Titles
+-- 8. Parent Firstnames
+-- 9. Specific Carer Firstnames, Surnames and Email Addresses
+
+-- This data is then be limited to only show students with student_status_id of either be 8, 9, or 10
+-- (Interview Pending/Wait Listed/Application Received).
+
 WITH future_students_offered_addresses AS
 (
 	SELECT

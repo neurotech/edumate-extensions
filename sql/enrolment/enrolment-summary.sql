@@ -1,3 +1,8 @@
+-- Enrolment Summary
+
+-- A summative report that collates counts of future male and female students by priority, rating and status.
+-- Feeds to (enrolment/enrolment-summary.sxw)
+
 WITH raw_report AS
     (
     SELECT 

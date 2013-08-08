@@ -1,3 +1,7 @@
+-- Logon Times - All Users
+
+-- A list of all users who have logged on for a given date.
+
 WITH LOGONS AS (
   SELECT
     STAFF.STAFF_ID,

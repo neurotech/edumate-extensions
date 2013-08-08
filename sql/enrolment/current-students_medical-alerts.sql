@@ -1,3 +1,7 @@
+-- Current Students - Medical Alerts
+
+-- A list of all current students, their medical alert(s) and their current form run.
+
 select
     surname,
     firstname,

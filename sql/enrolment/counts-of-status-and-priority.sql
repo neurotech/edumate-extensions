@@ -1,3 +1,7 @@
+-- Counts of Status and Priority
+
+-- A list of all priority levels, how many future students are at what priority and with what status.
+
 WITH STATUS_PRIORITY_CAPTURE AS
 (
   SELECT

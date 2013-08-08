@@ -1,3 +1,8 @@
+-- Applications Submitted (applications-submitted.sql)
+
+-- A list of all year 8, 9 or 10 students with the status of either 'Place Accepted' or 'Application Cancelled'
+-- who have an application date that is greater than the start of the previous calendar year.
+
 SELECT
   STUDENT_NUMBER AS "LOOKUP_CODE",
   CONTACT.SURNAME,

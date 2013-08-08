@@ -1,3 +1,7 @@
+-- Logon Times - Homeroom Teachers
+
+-- A list of all users who have logged on for a given date, limited to homeroom teachers only.
+
 WITH LOGONS AS (
   SELECT
     STAFF.STAFF_ID,

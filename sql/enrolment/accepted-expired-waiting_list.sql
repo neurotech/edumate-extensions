@@ -1,3 +1,9 @@
+-- Accepted/Expired/Waiting List Students
+
+-- The results of this query are referenced by (templates/accepted-expired-waiting_list.sxw).
+-- This report produces a list of all students who are either wait listed, have an expired offer, or have accepted a place in the College.
+-- It displays surname, first name, gender, gender counts, birthdate, status, form run, priority and application date.
+
 WITH aew AS
 (
 	SELECT

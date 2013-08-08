@@ -1,3 +1,7 @@
+-- Accepted Students by Year Group
+
+-- Generates a list of students who've had their application to join the College as a student accepted.
+
 WITH accepted_applications AS
 (
   SELECT
