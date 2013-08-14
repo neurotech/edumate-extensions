@@ -75,12 +75,9 @@ PRELIMS AS (
       COURSE NOT LIKE  'Photography Group'
     )
     AND
-    (
-      VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE - 1 YEAR), 'YYYY')
-      AND
-      VSCE.CLASS_TYPE_ID IN (1,9,10)
-    )
-    
+    (VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE - 1 YEAR), 'YYYY')
+    AND
+    VSCE.CLASS_TYPE_ID IN (1,9,10))
 
   GROUP BY VSCE.STUDENT_ID
 ),
@@ -114,12 +111,9 @@ SENIORS AS (
       COURSE NOT LIKE  'Photography Group'
     )
     AND
-    (
-      VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')
-      AND
-      VSCE.CLASS_TYPE_ID IN (1,9,10)
-    )
-    
+    (VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE - 1 YEAR), 'YYYY')
+    AND
+    VSCE.CLASS_TYPE_ID IN (1,9,10))
 
   GROUP BY VSCE.STUDENT_ID
 )
