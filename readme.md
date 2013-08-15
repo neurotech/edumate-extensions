@@ -145,6 +145,10 @@ A list of all users who have logged on for a given date, limited to homeroom tea
 
 A list of Year 12 students and the subjects they studied in their graduating year, sorted by surname. This data is used as part of the writing process for the reference letters received by Year 12 students at the end of the year.
 
+#### Year Coordinators and Pastoral Assistants (year-coordinators_pastoral-assistants.sql)
+
+A list of current Year Coordinators and Pastoral Assistants and their contact_ids. This is used by cyclic correspondence reports to email out report output. As we currently don't have a way of marrying form run information with relevant staff who are Pastoral Assitants, this is done manually via a CASE and a WHERE statement.
+
 ---
 
 ### Staff
