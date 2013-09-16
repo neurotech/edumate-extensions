@@ -72,7 +72,7 @@ PRELIMS AS (
       COURSE NOT LIKE '%Soccer%' AND
       COURSE NOT LIKE '%% Saturday School Languages' AND
       COURSE NOT LIKE 'LearningSupport %' AND
-      COURSE NOT LIKE  'Photography Group'
+      COURSE NOT LIKE 'Photography Group'
     )
     AND
     (VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE - 1 YEAR), 'YYYY')
@@ -111,7 +111,7 @@ SENIORS AS (
       COURSE NOT LIKE  'Photography Group'
     )
     AND
-    (VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE - 1 YEAR), 'YYYY')
+    (VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')
     AND
     VSCE.CLASS_TYPE_ID IN (1,9,10))
 
