@@ -1,6 +1,6 @@
 -- Alumni Information Audit
 
--- Lists all students with the status of 'Alumni' or 'Past Enrolment'*.
+-- Lists all students with the status of 'Alumni' or 'Past Enrolment'.
 -- The results of this report are used to audit the accuracy of contact information for ex-students.
 
 SELECT
