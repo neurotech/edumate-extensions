@@ -117,7 +117,6 @@ SELECT
 FROM future_students_offered_addresses
 INNER JOIN gender_counts ON gender_counts.exp_form_run = future_students_offered_addresses.exp_form_run
 
---WHERE future_students_offered_addresses.exp_form_run = '[[Starting Year and Cohort=query_list(SELECT form_run.form_run FROM form_run WHERE form_run >= '2013 %' ORDER BY form_run)]]'
-WHERE future_students_offered_addresses.exp_form_run = '2014 Year 07'
+WHERE future_students_offered_addresses.exp_form_run = '[[Starting Year and Cohort=query_list(SELECT form_run.form_run FROM form_run WHERE form_run >= '2013 %' ORDER BY form_run)]]'
 
 ORDER BY surname, firstname
