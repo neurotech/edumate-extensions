@@ -18,6 +18,7 @@ WITH aew AS
 			WHEN 9 THEN 'Wait Listed'
 			WHEN 7 THEN 'Offered Place'
 			WHEN 10 THEN 'Application Received'
+			WHEN 8 THEN 'Interview Pending'
 		END AS "STATUS",
 		
 		form_run,
@@ -88,8 +89,9 @@ WITH aew AS
 		END AS "PRIORITY_LEVEL_FULL",
 		
 		TO_CHAR(futurekids.date_application,'DD/MM/YY') AS "APPLIED",
-		next_interview,
-		date_offer
+		futurekids.next_interview,
+		futurekids.date_offer,
+		EXTERNAL_SCHOOL.EXTERNAL_SCHOOL
 	
 	FROM table(edumate.getallstudentstatus(current_date)) futurekids
 	
@@ -97,8 +99,10 @@ WITH aew AS
 	INNER JOIN gender on gender.gender_id = contact.gender_id
 	FULL JOIN priority on priority.priority_id = futurekids.priority_id
 	INNER JOIN form_run ON form_run.form_run_id = futurekids.exp_form_run_id
+	INNER JOIN STU_ENROLMENT ON futurekids.STUDENT_ID = STU_ENROLMENT.STUDENT_ID
+  INNER JOIN EXTERNAL_SCHOOL ON STU_ENROLMENT.PREV_SCHOOL_ID = EXTERNAL_SCHOOL.EXTERNAL_SCHOOL_ID
 	
-	WHERE student_status_id IN (6, 14, 9, 7, 10)
+	WHERE student_status_id IN (6, 14, 8, 9, 7, 10)
 ),
 
 gender_counts AS
@@ -124,7 +128,8 @@ SELECT
 	aew.PRIORITY_LEVEL_FULL,
 	aew.applied,
 	aew.next_interview AS "INTERVIEW",
-	aew.date_offer AS "DATE_OF_OFFER"
+	aew.date_offer AS "DATE_OF_OFFER",
+	aew.EXTERNAL_SCHOOL as "CURRENT_SCHOOL"
 
 FROM aew
 
