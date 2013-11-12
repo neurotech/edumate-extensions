@@ -1,4 +1,9 @@
-WITH report_student_courses as (
+WITH REPORT_VARS AS (
+  SELECT '[[Report Period=query_list(select report_period from report_period where academic_year_id = (select academic_year_id from academic_year where academic_year = YEAR(CURRENT DATE)) and completed is null ORDER BY semester_id desc, start_date desc)]]' AS "REPORT_PERIOD"
+  FROM SYSIBM.SYSDUMMY1
+),
+
+report_student_courses as (
   SELECT
     report_period.report_period_id,
     report_period.report_period,
@@ -17,7 +22,9 @@ WITH report_student_courses as (
     student_form_run.end_date,
     course_report.printable AS STUDENT_CLASS_EXCLUSION,
     summation_report.printable AS STUDENT_REPORT_EXCLUSION
+
   FROM report_period
+
   INNER JOIN report_period_form_run ON report_period_form_run.report_period_id = report_period.report_period_id
   INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
   INNER JOIN timetable ON timetable.timetable_id = form_run.timetable_id
@@ -35,7 +42,9 @@ WITH report_student_courses as (
       AND course_report.report_period_id = report_period.report_period_id
   LEFT JOIN summation_report ON summation_report.student_id = student_form_run.student_id
       AND summation_report.report_period_id = report_period.report_period_id
-  WHERE report_period.report_period LIKE '[[Report Period=query_list(select report_period from report_period where academic_year_id = (select academic_year_id from academic_year where academic_year = YEAR(CURRENT DATE)) and completed is null ORDER BY semester_id desc, start_date desc)]]'
+  CROSS JOIN REPORT_VARS
+
+  WHERE report_period.report_period = REPORT_VARS.REPORT_PERIOD
 ),
 
 enabled as (
@@ -50,10 +59,13 @@ disabled as (
   WHERE course_exclusion > 0
 ),
 
-comments as (
-  SELECT course_id, comment_length
-  FROM report_period_comment
-  WHERE report_period_id = 291
+outlines as (
+  select class.course_id, rp.report_period, co.class_id, co.course_outline
+  from course_outline co
+  inner join class on class.class_id = co.class_id
+  inner join report_period rp on rp.report_period_id = co.report_period_id
+  cross join report_vars
+  where rp.report_period = report_vars.report_period
 ),
 
 raw_report as (
@@ -65,12 +77,16 @@ raw_report as (
 SELECT DISTINCT
   RAW.REPORT_PERIOD,
   COURSE.COURSE,
-  RAW.STATUS,
-  COMMENTS.COMMENT_LENGTH
+  CLASS.CLASS,
+  LENGTH(OUTLINES.COURSE_OUTLINE) AS "OUTLINE_CHAR_COUNT"
 
 FROM RAW_REPORT RAW
 
 LEFT JOIN COURSE ON COURSE.COURSE_ID = RAW.COURSE_ID
-LEFT JOIN COMMENTS ON COMMENTS.COURSE_ID = RAW.COURSE_ID
+LEFT JOIN SUBJECT ON SUBJECT.SUBJECT_ID = COURSE.SUBJECT_ID
+LEFT JOIN OUTLINES ON OUTLINES.COURSE_ID = RAW.COURSE_ID
+LEFT JOIN CLASS ON CLASS.CLASS_ID = OUTLINES.CLASS_ID
 
-ORDER BY RAW.STATUS DESC, COURSE.COURSE ASC
+WHERE RAW.STATUS = 'Included'
+
+ORDER BY COURSE.COURSE ASC, CLASS.CLASS ASC
