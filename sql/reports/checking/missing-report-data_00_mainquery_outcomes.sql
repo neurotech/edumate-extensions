@@ -99,3 +99,5 @@ INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
 INNER JOIN COURSE ON COURSE.COURSE_ID = SCO.COURSE_ID
 
 WHERE sco.scored < sco.outcomes
+
+ORDER BY sco.teacher, sco.class, contact.surname, contact.firstname
