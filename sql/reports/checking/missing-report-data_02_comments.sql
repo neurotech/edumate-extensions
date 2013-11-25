@@ -2,8 +2,10 @@ WITH student_courses AS (
   SELECT 
     ROW_NUMBER() OVER (PARTITION BY student.student_id, course.course_id ORDER BY class_enrollment.end_date DESC, class_enrollment.start_date DESC) AS "CLASS_NUM",
     report_period.report_period_id,
+    report_period.report_period,
     report_period.academic_year_id,
     report_period.semester_id,
+    department.department,
     course.course_id,
     student.student_id,    
     contact.firstname,
@@ -15,12 +17,15 @@ WITH student_courses AS (
 
   FROM report_period
   INNER JOIN report_period_form_run ON report_period_form_run.report_period_id = report_period.report_period_id 
-    AND report_period.report_period_id = [[mainquery.report_period_id]]
+    AND report_period.report_period = '[[Report Period=query_list(select report_period from report_period where academic_year_id = (select academic_year_id from academic_year where academic_year = YEAR(CURRENT DATE)) and completed is null ORDER BY semester_id desc, start_date desc)]]'
 
   INNER JOIN academic_year ON academic_year.academic_year_id = report_period.academic_year_id
   INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
   INNER JOIN class ON class.academic_year_id = academic_year.academic_year_id AND class.class_type_id != 2
-  INNER JOIN course ON course.course_id = class.course_id 
+  INNER JOIN course ON course.course_id = class.course_id
+  INNER JOIN subject ON subject.subject_id = course.subject_id
+  INNER JOIN department ON department.department_id = subject.department_id
+
   LEFT JOIN report_period_course ON report_period_course.report_period_id = report_period.report_period_id 
     AND report_period_course.course_id = course.course_id
 
@@ -55,9 +60,11 @@ WITH student_courses AS (
 )
 
 SELECT
+  sc.report_period,
   STUDENT.STUDENT_NUMBER AS "LOOKUP_CODE",
   SC.FIRSTNAME,
   SC.SURNAME,
+  SC.DEPARTMENT,
   SC.CLASS,
   SC.TEACHER,
   (CASE WHEN SC.COMMENT = 0 THEN 'None' ELSE 'Comment' END) AS "COMMENT"
@@ -68,4 +75,4 @@ INNER JOIN student on student.student_id = sc.student_id
 
 WHERE sc.class_num = 1 AND sc.comment = 0
 
-ORDER BY SC.TEACHER, SC.CLASS, SC.SURNAME, SC.FIRSTNAME
+ORDER BY SC.DEPARTMENT, SC.TEACHER, SC.CLASS, SC.SURNAME, SC.FIRSTNAME

@@ -3,8 +3,10 @@ WITH student_courses AS (
     ROW_NUMBER() OVER (PARTITION BY student.student_id, course.course_id ORDER BY class_enrollment.end_date DESC, class_enrollment.start_date DESC) AS "CLASS_NUM",
     report_period.report_period_id,
     report_period.report_period,
+    report_period.start_date,
     report_period.academic_year_id,
     report_period.semester_id,
+    department.department,
     course.course_id,
     student.student_id,    
     contact.firstname,
@@ -21,7 +23,9 @@ WITH student_courses AS (
   INNER JOIN academic_year ON academic_year.academic_year_id = report_period.academic_year_id
   INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
   INNER JOIN class ON class.academic_year_id = academic_year.academic_year_id AND class.class_type_id != 2
-  INNER JOIN course ON course.course_id = class.course_id 
+  INNER JOIN course ON course.course_id = class.course_id
+  INNER JOIN subject ON subject.subject_id = course.subject_id
+  INNER JOIN department ON department.department_id = subject.department_id
   LEFT JOIN report_period_course ON report_period_course.report_period_id = report_period.report_period_id 
     AND report_period_course.course_id = course.course_id
 
@@ -59,6 +63,7 @@ student_course_outcomes AS (
   SELECT
     student_courses.report_period_id,
     student_courses.report_period,
+    student_courses.department,
     student_courses.student_id,
     student_courses.course_id,
     student_courses.class,
@@ -74,16 +79,17 @@ student_course_outcomes AS (
     AND course_indicator.semester_id = student_courses.semester_id
   LEFT JOIN stud_ind_mark ON stud_ind_mark.indicator_id = course_indicator.indicator_id 
     AND stud_ind_mark.student_id = student_courses.student_id
-    AND stud_ind_mark.mark_date > DATE '2013-07-07'
+    AND stud_ind_mark.mark_date >= DATE (student_courses.start_date)
 
   WHERE student_courses.class_num = 1
 
-  GROUP BY student_courses.report_period_id, student_courses.report_period, student_courses.student_id, student_courses.course_id, student_courses.class, student_courses.teacher
+  GROUP BY student_courses.report_period_id, student_courses.report_period, student_courses.department, student_courses.student_id, student_courses.course_id, student_courses.class, student_courses.teacher
 )
 
 SELECT
   sco.report_period,
   sco.report_period_id,
+  sco.department,
   student.student_number as "LOOKUP_CODE",
   CONTACT.FIRSTNAME,
   CONTACT.SURNAME,
@@ -100,4 +106,4 @@ INNER JOIN COURSE ON COURSE.COURSE_ID = SCO.COURSE_ID
 
 WHERE sco.scored < sco.outcomes
 
-ORDER BY sco.teacher, sco.class, contact.surname, contact.firstname
+ORDER BY sco.department, sco.teacher, sco.class, contact.surname, contact.firstname
