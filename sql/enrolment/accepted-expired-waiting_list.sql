@@ -100,7 +100,7 @@ WITH aew AS
 	FULL JOIN priority on priority.priority_id = futurekids.priority_id
 	INNER JOIN form_run ON form_run.form_run_id = futurekids.exp_form_run_id
 	INNER JOIN STU_ENROLMENT ON futurekids.STUDENT_ID = STU_ENROLMENT.STUDENT_ID
-  INNER JOIN EXTERNAL_SCHOOL ON STU_ENROLMENT.PREV_SCHOOL_ID = EXTERNAL_SCHOOL.EXTERNAL_SCHOOL_ID
+  LEFT JOIN EXTERNAL_SCHOOL ON STU_ENROLMENT.PREV_SCHOOL_ID = EXTERNAL_SCHOOL.EXTERNAL_SCHOOL_ID
 	
 	WHERE student_status_id IN (6, 14, 8, 9, 7, 10)
 ),
@@ -135,6 +135,6 @@ FROM aew
 
 FULL JOIN gender_counts ON gender_counts.form_run = aew.form_run
 
-WHERE aew.form_run NOT LIKE TO_CHAR((current_date),'YYYY') || ' Year %'
+WHERE aew.form_run NOT LIKE TO_CHAR((current_date),'YYYY') || ' Year %' and aew.form_run = '2015 Year 07'
 
 ORDER BY aew.form_run ASC, aew.PRIORITY_LEVEL_FULL ASC, aew.status ASC, aew.surname ASC
