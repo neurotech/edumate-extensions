@@ -1,79 +1,95 @@
--- Co-Curricular Batch Rolls
-
--- Provides the Co-Curricular Coordinator and the Printery an easy way to produce pre-class and post-class rolls for all Co-Curricular groups for a given date.
--- Feeds to (attendance/co-curricular_batch-rolls.sxw)
-
-WITH STUDENT_ATTENDANCE AS (
-  SELECT
-    DA.STUDENT_ID,
-    DAS.DAILY_ATTENDANCE_STATUS
-
-  FROM DAILY_ATTENDANCE DA
-  
-  INNER JOIN DAILY_ATTENDANCE_STATUS DAS ON DAS.DAILY_ATTENDANCE_STATUS_ID = DA.AM_ATTENDANCE_STATUS_ID
-
-  WHERE
-    --DA.DATE_ON = (CURRENT DATE)
-    DA.DATE_ON = ('[[As at=date]]')
-    AND
-    DA.AM_ATTENDANCE_STATUS_ID IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+WITH cc_day AS (
+  SELECT ('[[Rolls for=date]]') AS "CC_DAY"
+  FROM sysibm.sysdummy1
 ),
 
-CC_DATA AS (
+term_vars AS (
   SELECT
-    CCG.STUDENT_ID,
-  	TO_CHAR(DATE(START_DATE), 'DD/MM/YYYY') AS "START_DATE",
-  	TO_CHAR(DATE(END_DATE), 'DD/MM/YYYY') AS "END_DATE",
-    
-    --TO_CHAR(DATE(CURRENT DATE), 'DD/MM/YYYY') AS "TODAY",
-    TO_CHAR(DATE('[[As at=date]]'), 'DD/MM/YYYY') AS "TODAY",
-    
-  	TO_CHAR(DATE(CURRENT DATE), 'Month DD, YYYY - ') || CHAR(TIME(CURRENT TIMESTAMP),USA) AS "PRINT_DATE",
-  	CCG.CLASS AS "CC_GROUP",
-    COURSE.CODE || '.' || CLASS.IDENTIFIER AS "TIMETABLE_CODE",
-  	(CASE WHEN CONTACT.PREFERRED_NAME IS NULL THEN CONTACT.FIRSTNAME ELSE CONTACT.PREFERRED_NAME END) AS "STUDENT_FIRSTNAME",
-  	CONTACT.SURNAME AS "STUDENT_SURNAME",
-  	SA.DAILY_ATTENDANCE_STATUS,
-  	
-  	/*
-  	-- Hack to generate rooms for wet weather
-    (CASE
-      WHEN COURSE.CODE || ' ' || CLASS.IDENTIFIER = 'CRBAF 03I' THEN '16'
-      WHEN COURSE.CODE || ' ' || CLASS.IDENTIFIER = 'CRBAF 03J' THEN '16'
-      ELSE NULL
-    END) AS "CC_ROOM"
-  	*/
-  	
-  	NULL AS "CC_ROOM"
+    (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (SELECT cc_day FROM cc_day) BETWEEN start_date AND end_date AND timetable.timetable LIKE '%Year 12') AS "JUNIORS_TERM_ID",
+    (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (SELECT cc_day FROM cc_day) BETWEEN start_date AND end_date AND timetable.timetable NOT LIKE '%Year 12') AS "SENIORS_TERM_ID"
 
-  FROM VIEW_STUDENT_CLASS_ENROLMENT CCG
+  FROM sysibm.sysdummy1
+),
+
+period_vars AS (
+  SELECT
+    (SELECT period.period_id FROM period
+    INNER JOIN period_cycle_day pcd ON pcd.period_id = period.period_id
+    WHERE period.period LIKE '%Curricular%' AND cycle_day_id = (SELECT * FROM TABLE(EDUMATE.GETCYCLEDAYID((SELECT juniors_term_id FROM term_vars), (SELECT cc_day FROM cc_day))))
+    ) AS "JUNIORS_PERIOD_ID",
+    (SELECT period.period_id FROM period
+    INNER JOIN period_cycle_day pcd ON pcd.period_id = period.period_id
+    WHERE period.period LIKE '%Curricular%' AND cycle_day_id = (SELECT * FROM TABLE(EDUMATE.GETCYCLEDAYID((SELECT seniors_term_id FROM term_vars), (SELECT cc_day FROM cc_day))))
+    ) AS "SENIORS_PERIOD_ID"
   
-  INNER JOIN STUDENT ON CCG.STUDENT_ID = STUDENT.STUDENT_ID
-  INNER JOIN CONTACT ON STUDENT.CONTACT_ID = CONTACT.CONTACT_ID
-  INNER JOIN STUDENT_ATTENDANCE SA ON SA.STUDENT_ID = CCG.STUDENT_ID
-  INNER JOIN CLASS ON CLASS.CLASS_ID = CCG.CLASS_ID
-  INNER JOIN COURSE ON COURSE.COURSE_ID = CLASS.COURSE_ID
+  FROM sysibm.sysdummy1
+),
+
+cc_classes AS (
+  SELECT * FROM TABLE(edumate.get_classes_period((SELECT cc_day FROM cc_day), (SELECT juniors_period_id FROM period_vars), (SELECT juniors_term_id FROM term_vars), 0))
+    UNION ALL
+  SELECT * FROM TABLE(edumate.get_classes_period((SELECT cc_day FROM cc_day), (SELECT seniors_period_id FROM period_vars), (SELECT seniors_term_id FROM term_vars), 0))
+),
+
+counts as (
+  SELECT
+    vsce.class_id, count(vsce.student_id) AS "TOTAL"
+  FROM cc_classes
+  INNER JOIN view_student_class_enrolment vsce ON vsce.class_id = cc_classes.class_id AND
+    (vsce.start_date <= (SELECT cc_day FROM cc_day) AND vsce.end_date >= (SELECT cc_day FROM cc_day))
   
+  GROUP BY vsce.class_id
+),
+
+allstudents AS (
+  SELECT vsce.class_id, vsce.student_id
+  FROM cc_classes
+  INNER JOIN view_student_class_enrolment vsce ON vsce.class_id = cc_classes.class_id AND
+    (vsce.start_date <= (SELECT cc_day FROM cc_day) AND vsce.end_date >= (SELECT cc_day FROM cc_day))
+),
+
+student_attendance AS (
+  SELECT
+    da.student_id,
+    status.daily_attendance_status
+
+  FROM daily_attendance da
+  
+  INNER JOIN daily_attendance_status status ON status.daily_attendance_status_id = da.am_attendance_status_id
+
   WHERE
-  	ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')
+    da.date_on = (SELECT cc_day FROM cc_day)
     AND
-    (START_DATE < (CURRENT DATE)
-    AND
-    END_DATE > (CURRENT DATE))
-    AND
-    -- Another hack to get around the issue of Co-Curricular classes set as 'Normal' instead of 'Co-curricular'
-    COURSE.CODE || ' ' || CLASS.IDENTIFIER IN
-    ('CRBTF 04I', 'CRBTF 04J', 'CRBTF 04S', 'CRBVB 04I', 'CRBVB 04J', 'CRBVB 04S', 'CRGSB 04I', 'CRGSB 04J', 'CRGTF 04I', 'CRGTF 04J', 'CRGVB 04S', 'CSALC 04A', 'CSART 04A', 'CSBSC 04A', 'CSCHL 04A', 'CSDAN 04A', 'CSDRB 04A', 'CSFTB 04A', 'CSFUT 04A', 'CSGYM 04A', 'CSHOZ 04A', 'CSLSC 04A', 'CSMCB 04A', 'CSNTF 04A', 'CSOFR 04A', 'CSOFR 04B', 'CSOHO 04A', 'CSOSC 04A', 'CSOVB 04A', 'CSPHO 04A', 'CSSAF 04A', 'CSSAF 04B', 'CSSBM 04A', 'CSSOZ 04A', 'CSSTF 04A', 'CSSTF 04B', 'CSSWI 04A', 'CSTAF 04A', 'CSTEN 04A', 'CSTEN 04B', 'CSTOZ 04A', 'CSTSC 04A', 'CSVOZ 04A', 'CSYOG 04A')
-  ORDER BY CC_GROUP ASC, STUDENT_SURNAME ASC
+    da.am_attendance_status_id IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
 )
 
 SELECT
-  CCD.TODAY,
-  CCD.PRINT_DATE,
-  CCD.CC_GROUP,
-  CCD.TIMETABLE_CODE,
-  CCD.STUDENT_FIRSTNAME,
-  CCD.STUDENT_SURNAME,
-  CCD.DAILY_ATTENDANCE_STATUS
-  
-FROM CC_DATA CCD
+  (SELECT TO_CHAR(DATE(cc_day), 'Month DD, YYYY') FROM cc_day) as "TODAY",
+  TO_CHAR(DATE(CURRENT DATE), 'Month DD, YYYY - ') || CHAR(TIME(CURRENT TIMESTAMP),USA) AS "PRINT_DATE",
+  (CASE WHEN course.code like 'CR%' THEN 'Representative' else 'Social' end) as "CC_TYPE",
+  course.course,
+  (CASE WHEN course.code like 'CR%' THEN 'Representative - ' else 'Social - ' end) || class.class AS "CLASS",
+  course.code || '.' || class.identifier AS "TIMETABLE_CODE",
+  room.room AS "WET_WEATHER_ROOM",
+  (CASE WHEN ROWNUMBER() OVER (PARTITION BY cc_classes.class_id) = 1 THEN counts.total ELSE null END) AS "TOTAL",
+  (CASE WHEN contact.preferred_name IS NULL THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
+  contact.surname,
+  sa.daily_attendance_status AS "STATUS"
+
+FROM cc_classes
+
+INNER JOIN period_class pc ON pc.period_class_id = cc_classes.period_class_id
+LEFT JOIN room ON room.room_id = pc.room_id
+
+INNER JOIN counts ON counts.class_id = cc_classes.class_id
+
+INNER JOIN class ON class.class_id = cc_classes.class_id
+INNER JOIN course ON course.course_id = class.course_id
+
+INNER JOIN allstudents ON allstudents.class_id = cc_classes.class_id
+INNER JOIN student ON student.student_id = allstudents.student_id
+INNER JOIN contact ON contact.contact_id = student.contact_id
+
+LEFT JOIN student_attendance sa ON sa.student_id = allstudents.student_id
+
+ORDER BY timetable_code, course, class, contact.surname, contact.firstname
