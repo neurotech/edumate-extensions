@@ -74,6 +74,7 @@ SELECT
   (CASE WHEN ROWNUMBER() OVER (PARTITION BY cc_classes.class_id) = 1 THEN counts.total ELSE null END) AS "TOTAL",
   (CASE WHEN contact.preferred_name IS NULL THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
   contact.surname,
+  hr.CLASS AS "HOMEROOM",
   sa.daily_attendance_status AS "STATUS"
 
 FROM cc_classes
@@ -89,6 +90,9 @@ INNER JOIN course ON course.course_id = class.course_id
 INNER JOIN allstudents ON allstudents.class_id = cc_classes.class_id
 INNER JOIN student ON student.student_id = allstudents.student_id
 INNER JOIN contact ON contact.contact_id = student.contact_id
+
+INNER JOIN view_student_class_enrolment vsce ON vsce.student_id = allstudents.student_id
+INNER JOIN class hr ON hr.class_id = vsce.class_id AND hr.class_type_id = 2 AND vsce.academic_year = TO_CHAR((current date), 'YYYY') AND vsce.end_date > (current date)
 
 LEFT JOIN student_attendance sa ON sa.student_id = allstudents.student_id
 
