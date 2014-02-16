@@ -16,7 +16,8 @@ SELECT
   END) "SEX",
   TO_CHAR((contact.birthdate), 'DD/MM/YYYY') AS "DATE_OF_BIRTH",
   birth_country.ascc_code AS "COUNTRY_OF_BIRTH",
-  language.ascl_id AS "LANG_AT_HOME"
+  language.ascl_id AS "LANG_AT_HOME",
+  indigenous.code AS "INDIGENOUS_STATUS"
 
 FROM TABLE(EDUMATE.get_currently_enroled_students((SELECT "NAPLAN_DAY" FROM report_vars))) gces
 
@@ -27,6 +28,7 @@ INNER JOIN form ON form.form_id = vsfr.form_id
 INNER JOIN gender ON gender.gender_id = contact.gender_id
 INNER JOIN country birth_country ON birth_country.country_id = student.birth_country_id
 INNER JOIN language ON language.language_id = contact.language_id
+INNER JOIN indigenous ON indigenous.indigenous_id = student.indigenous_id
 
 WHERE form.short_name IN (7,9)
 
