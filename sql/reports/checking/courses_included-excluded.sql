@@ -46,7 +46,7 @@ enabled as (
 
 disabled as (
   SELECT report_period, course_id, 'Excluded' as "STATUS"
-  FROM report_student_courses   
+  FROM report_student_courses
   WHERE course_exclusion > 0
 ),
 
