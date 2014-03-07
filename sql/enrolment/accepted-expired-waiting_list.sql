@@ -19,6 +19,7 @@ WITH aew AS
 			WHEN 7 THEN 'Offered Place'
 			WHEN 10 THEN 'Application Received'
 			WHEN 8 THEN 'Interview Pending'
+			WHEN 13 THEN 'Interview Complete'
 		END AS "STATUS",
 		
 		form_run,
@@ -102,7 +103,7 @@ WITH aew AS
 	INNER JOIN STU_ENROLMENT ON futurekids.STUDENT_ID = STU_ENROLMENT.STUDENT_ID
   LEFT JOIN EXTERNAL_SCHOOL ON STU_ENROLMENT.PREV_SCHOOL_ID = EXTERNAL_SCHOOL.EXTERNAL_SCHOOL_ID
 	
-	WHERE student_status_id IN (6, 14, 8, 9, 7, 10)
+	WHERE student_status_id IN (6, 14, 8, 9, 7, 10, 13)
 ),
 
 gender_counts AS
