@@ -1,12 +1,13 @@
 WITH cc_day AS (
-  SELECT ('[[Rolls for=date]]') AS "CC_DAY"
+  --SELECT ('[[Rolls for=date]]') AS "CC_DAY"
+  SELECT (current date) AS "CC_DAY"
   FROM sysibm.sysdummy1
 ),
 
 term_vars AS (
   SELECT
     (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (SELECT cc_day FROM cc_day) BETWEEN start_date AND end_date AND timetable.timetable LIKE '%Year 12') AS "JUNIORS_TERM_ID",
-    (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (SELECT cc_day FROM cc_day) BETWEEN start_date AND end_date AND timetable.timetable NOT LIKE '%Year 12') AS "SENIORS_TERM_ID"
+    (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (SELECT cc_day FROM cc_day) BETWEEN start_date AND end_date AND timetable.timetable NOT LIKE '%Year 12' AND timetable.timetable NOT LIKE '%Detentions%') AS "SENIORS_TERM_ID"
 
   FROM sysibm.sysdummy1
 ),
