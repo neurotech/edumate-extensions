@@ -49,6 +49,13 @@ ALL_STAFF AS (
   ORDER BY CONTACT.SURNAME
 ),
 
+current_staff AS (
+  SELECT contact_id
+  FROM group_membership gm
+  /* The groups_id of 386 is the 'Current Staff' group */
+  WHERE groups_id = 386 AND effective_end IS null OR effective_end > (current date)
+),
+
 STAFF_AWAY_DATA AS (
 
 SELECT
@@ -56,12 +63,12 @@ SELECT
   SA.AWAY_REASON_ID,
 
   CASE WHEN
-    TO_CHAR((FROM_DATE), 'DD') != TO_CHAR((TO_DATE), 'DD')
+    TO_CHAR((FROM_DATE), 'DD-MM') != TO_CHAR((TO_DATE), 'DD-MM')
     THEN (
       SELECT *
       FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT(
         (CASE WHEN
-          SA.FROM_DATE < (REPORT_VARS.REPORT_START)
+          SA.FROM_DATE <= (REPORT_VARS.REPORT_START)
           THEN (REPORT_VARS.REPORT_START)
           ELSE SA.FROM_DATE END),
         (CASE WHEN
@@ -209,4 +216,6 @@ INNER JOIN TOTALS ON TOTALS.STAFF_ID = ALL_STAFF.STAFF_ID
 CROSS JOIN ALL_TOTALS
 CROSS JOIN REPORT_VARS
 
-ORDER BY SICK_LEAVE DESC, PDN DESC
+WHERE all_staff.contact_id IN (SELECT contact_id FROM current_staff)
+
+ORDER BY SICK_LEAVE DESC, PDN DESC, SURNAME, FIRSTNAME
