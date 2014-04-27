@@ -37,7 +37,7 @@ SELECT
   -- outside of the scope of the report. If this occurs, then the start date
   -- of the report is rendered instead.
   CASE WHEN
-    FROM_DATE <= (REPORT_VARS.REPORT_START)
+    DATE(FROM_DATE) <= (REPORT_VARS.REPORT_START)
     THEN (REPORT_VARS.REPORT_START)
     ELSE FROM_DATE
   END AS "EFFECTIVE_START",
