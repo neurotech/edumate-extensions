@@ -13,7 +13,7 @@ WITH student_courses AS (
     contact.surname,
     class.class,
     CLASS.CLASS_ID,
-    c2.firstname ||' '|| c2.surname AS "TEACHER"
+    (CASE WHEN c2.preferred_name IS null THEN c2.firstname ELSE c2.preferred_name END) ||' '|| c2.surname AS "TEACHER"
 
   FROM report_period
 
@@ -75,11 +75,14 @@ student_course_outcomes AS (
 
   -- get outcomes
   INNER JOIN course_indicator ON course_indicator.course_id = student_courses.course_id 
-    AND course_indicator.academic_year_id = student_courses.academic_year_id 
+    AND course_indicator.academic_year_id = student_courses.academic_year_id
     AND course_indicator.semester_id = student_courses.semester_id
+    
+  INNER JOIN indicator ON indicator.indicator_id = course_indicator.indicator_id AND (indicator.status_flag = 0 OR indicator.status_flag is null)
+
   LEFT JOIN stud_ind_mark ON stud_ind_mark.indicator_id = course_indicator.indicator_id 
     AND stud_ind_mark.student_id = student_courses.student_id
-    AND stud_ind_mark.mark_date >= DATE (student_courses.start_date)
+    AND stud_ind_mark.mark_date >= DATE(student_courses.start_date)
 
   WHERE student_courses.class_num = 1
 
@@ -94,7 +97,7 @@ SELECT
   CONTACT.FIRSTNAME,
   CONTACT.SURNAME,
   sco.class,
-  sco.teacher,  
+  sco.teacher,
   (CASE WHEN SCO.SCORED = 0 THEN 'None' ELSE CHAR(SCO.SCORED) END) AS "SCORED",
   SCO.OUTCOMES
 
