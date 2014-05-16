@@ -19,7 +19,7 @@ WITH student_courses AS (
 
   INNER JOIN report_period_form_run ON report_period_form_run.report_period_id = report_period.report_period_id 
     AND report_period.report_period = '[[Report Period=query_list(select report_period from report_period where academic_year_id = (select academic_year_id from academic_year where academic_year = YEAR(CURRENT DATE)) and completed is null ORDER BY semester_id desc, start_date desc)]]'
-
+  
   INNER JOIN academic_year ON academic_year.academic_year_id = report_period.academic_year_id
   INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
   INNER JOIN class ON class.academic_year_id = academic_year.academic_year_id AND class.class_type_id != 2
