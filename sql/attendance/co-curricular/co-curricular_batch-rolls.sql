@@ -1,6 +1,5 @@
 WITH cc_day AS (
-  --SELECT ('[[Rolls for=date]]') AS "CC_DAY"
-  SELECT (current date) AS "CC_DAY"
+  SELECT ('[[Rolls for=date]]') AS "CC_DAY"
   FROM sysibm.sysdummy1
 ),
 
