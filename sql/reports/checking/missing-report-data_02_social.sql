@@ -72,15 +72,17 @@ WITH student_courses AS
         COUNT(DISTINCT social_dev_course.social_dev_id) - 5 AS "SOCIAL_DEVS"
     FROM student_courses
         -- get social_devs
-        INNER JOIN social_dev_course ON social_dev_course.course_id = student_courses.course_id
+        LEFT JOIN social_dev_course ON social_dev_course.course_id = student_courses.course_id
+        LEFT JOIN social_dev ON social_dev_course.social_dev_id = social_dev.social_dev_id
         LEFT JOIN stud_social_dev ON stud_social_dev.student_id = student_courses.student_id
             AND stud_social_dev.report_period_id = student_courses.report_period_id
             AND stud_social_dev.course_id = social_dev_course.course_id
             AND stud_social_dev.social_dev_id = social_dev_course.social_dev_id
     WHERE student_courses.class_num = 1
+    AND social_dev.code != 'MENTORAP'
     GROUP BY student_courses.report_period, student_courses.report_period_id, student_courses.department, student_courses.student_id, student_courses.course_id, student_courses.class, student_courses.teacher
     )
-    
+
 SELECT
   sco.report_period,
   sco.report_period_id,
