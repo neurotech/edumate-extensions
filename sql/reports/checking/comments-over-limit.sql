@@ -1,7 +1,6 @@
 WITH report_vars AS (
   SELECT
     '[[Report Period=query_list(SELECT report_period FROM report_period WHERE academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(CURRENT DATE)) AND completed IS null ORDER BY semester_id DESC, start_date DESC)]]' AS "REPORT_PERIOD"
-  
   FROM sysibm.sysdummy1
 ),
 
