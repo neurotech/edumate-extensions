@@ -1,143 +1,163 @@
--- Year 12 References (year-12-references.sql)
-
--- A list of Year 12 students and the subjects they studied in their graduating year, sorted by surname.
--- This data is used as part of the writing process for the reference letters received by Year 12 students at the end of the year.
-WITH ALL_STUDENTS AS (
+WITH report_vars AS (
   SELECT
-    STUDENT.STUDENT_ID,
-  	CONTACT.SURNAME,
-  	CONTACT.FIRSTNAME,
-  	CONTACT.PREFERRED_NAME,
-  	CONTACT.BIRTHDATE,
-  	GASS.START_DATE,
-  	CAST((((DATE(CURRENT DATE)) - DATE((GASS.START_DATE))) / 10000) AS DECIMAL(3,2)) AS "TIME_AT_RBC"
+    DATE('2013-10-18') AS "PRELIM_DATE",
+    DATE('2014-12-12') AS "SENIOR_DATE"
   
-  FROM TABLE(EDUMATE.GET_ENROLED_STUDENTS_FORM_RUN(CURRENT_DATE)) REFERENCES
-
-  INNER JOIN STUDENT ON STUDENT.STUDENT_ID = REFERENCES.STUDENT_ID
-  INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
-  INNER JOIN FORM_RUN ON FORM_RUN.FORM_RUN_ID =
-  (
-    SELECT FORM_RUN.FORM_RUN_ID
-    FROM TABLE(EDUMATE.GET_ENROLED_STUDENTS_FORM_RUN(CURRENT DATE)) GRSFR
-    INNER JOIN FORM_RUN ON GRSFR.FORM_RUN_ID = FORM_RUN.FORM_RUN_ID
-    WHERE GRSFR.STUDENT_ID = STUDENT.STUDENT_ID
-    FETCH FIRST 1 ROW ONLY
-  )
-  INNER JOIN TABLE(EDUMATE.GETALLSTUDENTSTATUS(CURRENT DATE)) GASS ON GASS.STUDENT_ID = REFERENCES.STUDENT_ID
-  
-  WHERE FORM_RUN.FORM_RUN = TO_CHAR((CURRENT DATE), 'YYYY') || ' Year 12'
-  
-  ORDER BY FORM_RUN.FORM_RUN ASC, CONTACT.SURNAME ASC
+  FROM SYSIBM.SYSDUMMY1
 ),
 
-HOMEROOMS AS (
+all_students AS (
   SELECT
-    VSCE.STUDENT_ID,
-    VSCE.CLASS AS "HOMEROOM"
-    
-  FROM VIEW_STUDENT_CLASS_ENROLMENT VSCE
-  
-  INNER JOIN ALL_STUDENTS ON ALL_STUDENTS.STUDENT_ID = VSCE.STUDENT_ID
+    gass.student_id,
+    ((SELECT * FROM TABLE(DB2INST1.business_days_count(gass.start_date, gass.end_date))) * 0.00273790700698851) AS "TIME_AT_RBC"
+  FROM TABLE(EDUMATE.getallstudentstatus(current date)) gass
+  WHERE gass.student_status_id = 5 AND gass.last_form_run_id = (SELECT form_run_id FROM form_run WHERE form_id = 14 AND form_run LIKE TO_CHAR((current date), 'YYYY') || '%')
+),
 
+prelim_courses AS (
+  SELECT
+    vsce.student_id,
+    LISTAGG(vsce.course, ', ') WITHIN GROUP(ORDER BY vsce.course) AS "COURSES"
+
+  FROM view_student_class_enrolment vsce
+  
   WHERE
-    VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')
+    vsce.class_type_id IN (1,9,10,1101,1124,1148)
     AND
-    VSCE.CLASS_TYPE_ID = 2
-),
-
-PRELIMS AS (
-  SELECT
-    VSCE.STUDENT_ID,
-    LISTAGG(VSCE.COURSE, ', ') WITHIN GROUP(ORDER BY VSCE.STUDENT_ID) AS "PRELIM_CLASSES"
-
-  FROM VIEW_STUDENT_CLASS_ENROLMENT VSCE
-
-  INNER JOIN ALL_STUDENTS ON ALL_STUDENTS.STUDENT_ID = VSCE.STUDENT_ID
-
-  WHERE
     (
-      COURSE NOT LIKE '%%%%tudy%' AND
-      COURSE NOT LIKE '%% Early Leave' AND
-      COURSE NOT LIKE '%% Pastoral Care' AND
-      COURSE NOT LIKE 'CS %' AND
-      COURSE NOT LIKE 'CBSA %' AND
-      COURSE NOT LIKE 'SCC %' AND
-      COURSE NOT LIKE '% Yoga %' AND
-      COURSE NOT LIKE 'Yoga%' AND
-      COURSE NOT LIKE '%Lawn%' AND
-      COURSE NOT LIKE '%Gym%' AND
-      COURSE NOT LIKE '%Softball%' AND
-      COURSE NOT LIKE '%Gym%' AND
-      COURSE NOT LIKE '%Soccer%' AND
-      COURSE NOT LIKE '%% Saturday School Languages' AND
-      COURSE NOT LIKE 'LearningSupport %' AND
-      COURSE NOT LIKE 'Photography Group'
+      vsce.start_date < (SELECT prelim_date FROM report_vars)
+      AND
+      vsce.end_date >= (SELECT prelim_date FROM report_vars)
     )
     AND
-    (VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE - 1 YEAR), 'YYYY')
+    vsce.student_id IN (SELECT student_id FROM all_students)
     AND
-    VSCE.CLASS_TYPE_ID IN (1,9,10))
-
-  GROUP BY VSCE.STUDENT_ID
+    (
+      vsce.course NOT LIKE 'CS%'
+      AND
+      vsce.course NOT LIKE '%Study%'
+      AND
+      vsce.course NOT LIKE '%Soccer%'
+      AND
+      vsce.course NOT LIKE '%Cricket%'
+      AND
+      vsce.course NOT LIKE '%Pastoral Care%'
+      AND
+      vsce.course NOT LIKE '%Early Leave%'
+      AND
+      vsce.course NOT LIKE '%Football%'
+      AND
+      vsce.course NOT LIKE '%Volleyball%'
+      AND
+      vsce.course NOT LIKE '%Softball%'
+      AND
+      vsce.course NOT LIKE '%Cheer%'
+      AND
+      vsce.course NOT LIKE '%Netball%'
+      AND
+      vsce.course NOT LIKE 'Art CC'
+      AND
+      vsce.course NOT LIKE '%Gymnastics%'
+      AND
+      vsce.course NOT LIKE '%Lawn%'
+      AND
+      vsce.course NOT LIKE '%OzTag%'
+      AND
+      vsce.course NOT LIKE '%Basketball%'
+      AND
+      vsce.course NOT LIKE '%Withdrawal%'
+      AND
+      vsce.course NOT LIKE '%Saturday%'
+    )
+  
+  GROUP BY vsce.student_id
 ),
 
-SENIORS AS (
+senior_courses AS (
   SELECT
-    VSCE.STUDENT_ID,
-    LISTAGG(VSCE.COURSE, ', ') WITHIN GROUP(ORDER BY VSCE.STUDENT_ID) AS "SENIOR_CLASSES"
-
-  FROM VIEW_STUDENT_CLASS_ENROLMENT VSCE
-
-  INNER JOIN ALL_STUDENTS ON ALL_STUDENTS.STUDENT_ID = VSCE.STUDENT_ID
-
+    vsce.student_id,
+    LISTAGG(vsce.course, ', ') WITHIN GROUP(ORDER BY vsce.course) AS "COURSES"
+  
+  FROM view_student_class_enrolment vsce
+  
   WHERE
+    vsce.class_type_id IN (1,9,10,1101,1124,1148)
+    AND
     (
-      COURSE NOT LIKE '%%%%tudy%' AND
-      COURSE NOT LIKE '%% Early Leave' AND
-      COURSE NOT LIKE '%% Pastoral Care' AND
-      COURSE NOT LIKE 'CS %' AND
-      COURSE NOT LIKE 'CBSA %' AND
-      COURSE NOT LIKE 'SCC %' AND
-      COURSE NOT LIKE '% Yoga %' AND
-      COURSE NOT LIKE 'Yoga%' AND
-      COURSE NOT LIKE '%Lawn%' AND
-      COURSE NOT LIKE '%Gym%' AND
-      COURSE NOT LIKE '%Softball%' AND
-      COURSE NOT LIKE '%Gym%' AND
-      COURSE NOT LIKE '%Soccer%' AND
-      COURSE NOT LIKE '%% Saturday School Languages' AND
-      COURSE NOT LIKE 'LearningSupport %' AND
-      COURSE NOT LIKE  'Photography Group'
+      vsce.start_date < (SELECT senior_date FROM report_vars)
+      AND
+      vsce.end_date >= (SELECT senior_date FROM report_vars)
     )
     AND
-    (VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')
+    vsce.student_id IN (SELECT student_id FROM all_students)
     AND
-    VSCE.CLASS_TYPE_ID IN (1,9,10))
-
-  GROUP BY VSCE.STUDENT_ID
+    (
+      vsce.course NOT LIKE 'CS%'
+      AND
+      vsce.course NOT LIKE '%Study%'
+      AND
+      vsce.course NOT LIKE '%Soccer%'
+      AND
+      vsce.course NOT LIKE '%Cricket%'
+      AND
+      vsce.course NOT LIKE '%Pastoral Care%'
+      AND
+      vsce.course NOT LIKE '%Early Leave%'
+      AND
+      vsce.course NOT LIKE '%Football%'
+      AND
+      vsce.course NOT LIKE '%Volleyball%'
+      AND
+      vsce.course NOT LIKE '%Softball%'
+      AND
+      vsce.course NOT LIKE '%Cheer%'
+      AND
+      vsce.course NOT LIKE '%Netball%'
+      AND
+      vsce.course NOT LIKE 'Art CC'
+      AND
+      vsce.course NOT LIKE '%Gymnastics%'
+      AND
+      vsce.course NOT LIKE '%Lawn%'
+      AND
+      vsce.course NOT LIKE '%OzTag%'
+      AND
+      vsce.course NOT LIKE '%Basketball%'
+      AND
+      vsce.course NOT LIKE '%Withdrawal%'
+      AND
+      vsce.course NOT LIKE '%Saturday%'
+      AND
+      vsce.course NOT LIKE '%CBSA%'
+    )
+  GROUP BY vsce.student_id
 )
 
 SELECT
-  ALL_STUDENTS.SURNAME,
-  ALL_STUDENTS.FIRSTNAME,
-  ALL_STUDENTS.PREFERRED_NAME,
-  HOMEROOMS.HOMEROOM,
-  ALL_STUDENTS.BIRTHDATE AS "DOB",
-  ALL_STUDENTS.START_DATE,
-  CASE WHEN
-    ALL_STUDENTS.TIME_AT_RBC < 1.00 THEN CAST(ALL_STUDENTS.TIME_AT_RBC AS DECIMAL(3,2))
-    ELSE
-    CAST(ALL_STUDENTS.TIME_AT_RBC AS DECIMAL(3,1))
-  END AS "TIME_AT_RBC",
-  
-  PRELIMS.PRELIM_CLASSES,
-  SENIORS.SENIOR_CLASSES
+  student.student_number,
+  contact.surname,
+  contact.firstname,
+  contact.preferred_name,
+  hr.class AS "HOMEROOM",
+  contact.birthdate AS "DOB",
+  CAST(students.time_at_rbc AS DECIMAL(3,2)) AS "TIME_AT_RBC",
+  --CAST(ROUND(students.time_at_rbc) AS DECIMAL(3,2)) AS "TIME_AT_RBC",
+  gass.start_date,
+  gass.end_date,
+  gass.last_form_run AS "GRADUATING_FORM_RUN",
+  prelim_courses.courses AS "PRELIM_COURSES",
+  senior_courses.courses AS "SENIOR_COURSES"
 
-FROM ALL_STUDENTS
+FROM all_students students
 
-INNER JOIN HOMEROOMS ON HOMEROOMS.STUDENT_ID = ALL_STUDENTS.STUDENT_ID
-INNER JOIN PRELIMS ON PRELIMS.STUDENT_ID = ALL_STUDENTS.STUDENT_ID
-INNER JOIN SENIORS ON SENIORS.STUDENT_ID = ALL_STUDENTS.STUDENT_ID
+INNER JOIN TABLE(EDUMATE.getallstudentstatus(current date)) gass ON gass.student_id = students.student_id
+INNER JOIN contact ON contact.contact_id = gass.contact_id
+INNER JOIN student ON student.student_id = students.student_id
+INNER JOIN view_student_class_enrolment vsce ON vsce.student_id = gass.student_id
+INNER JOIN class hr ON hr.class_id = vsce.class_id AND hr.class_type_id = 2 AND vsce.academic_year = TO_CHAR((current date), 'YYYY') AND vsce.end_date > (current date)
+LEFT JOIN prelim_courses ON prelim_courses.student_id = students.student_id
+LEFT JOIN senior_courses ON senior_courses.student_id = students.student_id
 
-ORDER BY SURNAME
+WHERE gass.student_status_id = 5 AND gass.last_form_run_id = (SELECT form_run_id FROM form_run WHERE form_id = 14 AND form_run LIKE TO_CHAR((current date), 'YYYY') || '%')
+
+ORDER BY contact.surname, contact.preferred_name, contact.firstname
