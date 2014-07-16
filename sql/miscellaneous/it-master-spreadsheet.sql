@@ -6,7 +6,7 @@ WITH hr_teachers AS (
   FROM TABLE(EDUMATE.getallstudentstatus(date('[[As at=date]]'))) gass
 
   left JOIN view_student_class_enrolment vsce ON vsce.student_id = gass.student_id AND vsce.class_type_id = 2 AND vsce.academic_year = YEAR((current date)) AND date('[[As at=date]]') between vsce.start_date and vsce.end_date
-
+  
   left JOIN class_teacher ON class_teacher.class_id = vsce.class_id
   left JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
   left JOIN contact hr ON hr.contact_id = teacher.contact_id
@@ -105,7 +105,7 @@ master AS (
   INNER JOIN student ON student.student_id = gass.student_id
   INNER JOIN contact stu_contact ON stu_contact.contact_id = gass.contact_id
   INNER JOIN gender stu_gender ON stu_gender.gender_id = stu_contact.gender_id
-  INNER JOIN house ON house.house_id = student.house_id
+  LEFT JOIN house ON house.house_id = student.house_id
   left JOIN view_student_class_enrolment vsce ON vsce.student_id = gass.student_id AND vsce.class_type_id = 2 AND vsce.academic_year = YEAR((current date)) AND date('[[As at=date]]') between vsce.start_date and vsce.end_date
 
   INNER JOIN hr_teachers hr ON hr.student_id = gass.student_id
