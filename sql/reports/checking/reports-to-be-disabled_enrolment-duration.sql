@@ -1,9 +1,7 @@
 WITH report_vars AS (
   SELECT
-    --('[[Report Period=query_list(SELECT report_period FROM report_period WHERE academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(CURRENT DATE)) AND completed IS null ORDER BY semester_id desc, start_date desc)]]') AS "REPORT_PERIOD_NAME",
-    --('[[Enrolment duration cutoff]]') AS "ENROLMENT_LIMIT"
-    '2014 Semester 1 Year 07' AS "REPORT_PERIOD_NAME",
-    ('3') AS "ENROLMENT_LIMIT"
+    ('[[Report Period=query_list(SELECT report_period FROM report_period WHERE academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(CURRENT DATE)) AND completed IS null ORDER BY semester_id desc, start_date desc)]]') AS "REPORT_PERIOD_NAME",
+    ('[[Duration cutoff]]') AS "ENROLMENT_LIMIT"
 
   FROM SYSIBM.SYSDUMMY1
 ),
@@ -26,11 +24,12 @@ old_classes AS (
   INNER JOIN report_period ON report_period.report_period_id = (SELECT report_period_id FROM report_period WHERE report_period = (SELECT report_period_name FROM report_vars))
 
   WHERE
-    vsce.end_date BETWEEN report_period.start_date AND report_period.end_date
+   -- vsce.end_date BETWEEN report_period.start_date AND report_period.end_date
+    vsce.academic_year = YEAR(current date)
     AND
     (SELECT * FROM TABLE(DB2INST1.business_days_count(vsce.start_date, vsce.end_date))) <= (SELECT enrolment_limit FROM report_vars)
     AND
-    vsce.class_type_id IN (1,2)
+    vsce.class_type_id IN (1,2,10,1101,1124,1148)
 ),
 
 raw_report AS (
