@@ -1,122 +1,70 @@
--- Future Students (Accepted/Interview Pending/Wait Listed/Application Received) - Addresses
-
--- This report is a modified clone of the 'future-students_carer-addresses.sql' report.
--- It will render the following information for a specified form and year:
-
--- 1. Student Firstname and Lastname
--- 2. Gender, Gender Counts, Total Student Counts
--- 3. Expected Form
--- 4. Status
--- 5. Priority
--- 6. Student Street, Suburb, Country
--- 7. Parent Titles
--- 8. Parent Firstnames
--- 9. Specific Carer Firstnames, Surnames and Email Addresses
-
--- This data is then be limited to only show students with student_status_id of either be 8, 9, or 10
--- (Interview Pending/Wait Listed/Application Received).
-
-WITH future_students_offered_addresses AS
-(
-	SELECT
-		contact.firstname,
-		contact.surname,
-		gender.gender,
-		exp_form_run,
-		CASE student_status_id
-		  WHEN 6 THEN 'Place Accepted'
-		  WHEN 7 THEN 'Offered Place'
-			WHEN 8 THEN 'Interview Pending'
-			WHEN 9 THEN 'Wait Listed'
-			WHEN 10 THEN 'Application Received'
-			WHEN 14 THEN 'Expired Offer'
-			ELSE 'Other'
-		END AS "STATUS",
-		priority.priority,
-	  (CASE WHEN VCPA.ADDRESS1 IS NULL THEN VCHA.ADDRESS1 || '' || VCHA.ADDRESS2 ELSE VCPA.ADDRESS1 || '' || VCPA.ADDRESS2 END) AS "STREET",
-	  (CASE WHEN VCPA.ADDRESS3 IS NULL THEN VCHA.ADDRESS3 ELSE VCPA.ADDRESS3 END) AS "SUBURB",
-    (CASE WHEN VCPA.COUNTRY IS NULL THEN VCHA.COUNTRY ELSE VCPA.COUNTRY END) AS "COUNTRY",
-
-	  vslc.SALUTATION as PARENT_TITLES,
-	  vslc.FIRSTNAMES as PARENT_FIRSTNAMES,
-	    
-	  carer1.firstname AS CARER1_FIRSTNAME, carer1.surname AS CARER1_SURNAME, carer1.email_address AS CARER1_EMAIL_ADDRESS,
-	  carer2.firstname AS CARER2_FIRSTNAME, carer2.surname AS CARER2_SURNAME, carer2.email_address AS CARER2_EMAIL_ADDRESS,
-	  carer3.firstname AS CARER3_FIRSTNAME, carer3.surname AS CARER3_SURNAME, carer3.email_address AS CARER3_EMAIL_ADDRESS,
-	  carer4.firstname AS CARER4_FIRSTNAME, carer4.surname AS CARER4_SURNAME, carer4.email_address AS CARER4_EMAIL_ADDRESS
-
-	FROM table(edumate.getallstudentstatus(current_date)) accepted
-	
-	INNER JOIN contact on accepted.contact_id = contact.contact_id
-	INNER JOIN gender on contact.gender_id = gender.gender_id
-	INNER JOIN stu_enrolment on accepted.student_id = stu_enrolment.student_id
-
-    INNER JOIN form_run on accepted.exp_form_run_id = form_run.form_run_id
-    
-    LEFT JOIN priority ON priority.priority_id = accepted.priority_id
-    
-    LEFT JOIN view_contact_home_address vcha on contact.contact_id = vcha.contact_id
-    LEFT JOIN view_contact_postal_address vcpa on contact.contact_id = vcpa.contact_id
-    LEFT JOIN view_student_liveswith_carers vslc on stu_enrolment.student_id = vslc.student_id
-
-    LEFT JOIN contact carer1 on vslc.carer1_contact_id = carer1.contact_id
-    LEFT JOIN contact carer2 on vslc.carer2_contact_id = carer2.contact_id
-    LEFT JOIN contact carer3 on vslc.carer3_contact_id = carer3.contact_id
-    LEFT JOIN contact carer4 on vslc.carer4_contact_id = carer4.contact_id
-	
-	WHERE
-	  student_status_id = '6' OR
-	  student_status_id = '7' OR
-		student_status_id = '8' OR
-		student_status_id = '9' OR
-		student_status_id = '10' OR
-		student_status_id = '14'
-	
-	ORDER BY
-		exp_form_run ASC, surname ASC
+WITH report_vars AS (
+  SELECT '[[Form=query_list(SELECT form_run FROM form_run WHERE form_run > YEAR(current date + 1 year) || ' %' ORDER BY form_run)]]' AS "FORM"
+  FROM SYSIBM.SYSDUMMY1
 ),
 
-gender_counts AS
-(
-	SELECT
-		exp_form_run,
-        SUM(CASE WHEN gender='Male' THEN 1 ELSE 0 END) AS "MALES",
-        SUM(CASE WHEN gender='Female' THEN 1 ELSE 0 END) AS "FEMALES",
-        count(exp_form_run) AS "TOTAL_STUDENTS"
-	FROM future_students_offered_addresses
-	GROUP BY exp_form_run
+students AS (
+  SELECT
+    student_id,
+    contact_id,
+    student_number,
+    student_status_id,
+    exp_form_run,
+    priority_id
+  
+  FROM TABLE(EDUMATE.getallstudentstatus(current date)) students
+  
+  /*
+    student_status_id
+    -----------------
+    6:  Place Accepted
+    7: Offered Place
+    8:  Interview Pending
+    9:  Wait Listed
+    10: Application Received
+    14: Expired Offer
+
+Place Accepted, Interview Pending, Wait Listed, Application Received, Expired Offer, Offer Placed.
+  */
+  
+  WHERE students.student_status_id IN (6,7,8,9,10,14) AND exp_form_run = (SELECT form FROM report_vars)
 )
 
-SELECT
-	future_students_offered_addresses.firstname,
-	future_students_offered_addresses.surname,
-	future_students_offered_addresses.gender,
-	CAST(gender_counts.males AS VARCHAR(3))||' Boys, '||CAST(gender_counts.females AS VARCHAR(3))||' Girls' AS "GENDER_COUNTS",
-	CAST(gender_counts.total_students AS VARCHAR(3))||' total students' AS "TOTAL_STUDENTS",
-	future_students_offered_addresses.exp_form_run,
-	future_students_offered_addresses.status,
-	future_students_offered_addresses.priority,
-	future_students_offered_addresses.street,
-	future_students_offered_addresses.suburb,
-	future_students_offered_addresses.country,
-	future_students_offered_addresses.parent_titles,
-	future_students_offered_addresses.parent_firstnames,
-	future_students_offered_addresses.CARER1_FIRSTNAME,
-	future_students_offered_addresses.CARER1_SURNAME,
-	future_students_offered_addresses.CARER1_EMAIL_ADDRESS,
-	future_students_offered_addresses.CARER2_FIRSTNAME,
-	future_students_offered_addresses.CARER2_SURNAME,
-	future_students_offered_addresses.CARER2_EMAIL_ADDRESS,
-	future_students_offered_addresses.CARER3_FIRSTNAME,
-	future_students_offered_addresses.CARER3_SURNAME,
-	future_students_offered_addresses.CARER3_EMAIL_ADDRESS,
-	future_students_offered_addresses.CARER4_FIRSTNAME,
-	future_students_offered_addresses.CARER4_SURNAME,
-	future_students_offered_addresses.CARER4_EMAIL_ADDRESS
+SELECT DISTINCT
+  (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "STUDENT_FIRSTNAME",
+  contact.surname AS "STUDENT_SURNAME",
+  students.exp_form_run,
+  student_status.student_status,
+  priority.priority,
+  mail_carers.salutation,
+  (CASE
+    WHEN mail_carers.lives_with_flag = 1 THEN 'Yes'
+    WHEN mail_carers.lives_with_flag = 0 THEN 'No'
+    ELSE null
+  END) AS "LIVES_WITH",
+  
+  (CASE WHEN vcpa.address1 IS NULL THEN vcha.address1 ELSE vcpa.address1 END) ||
+  (CASE
+    WHEN vcpa.address1 IS NULL THEN
+      (CASE WHEN vcha.address1 = '' THEN '' ELSE '/' END) || vcha.address2
+    ELSE
+      (CASE WHEN vcpa.address1 = '' THEN '' ELSE '' END) || vcpa.address2
+  END) AS "ADDRESS1",
+  
+  (CASE
+    WHEN vcpa.address1 IS NULL THEN
+      (CASE WHEN vcha.address3 = '' THEN vcha.country ELSE vcha.address3 END)
+    ELSE
+      (CASE WHEN vcpa.address3 = '' THEN vcpa.country ELSE vcpa.address3 END)
+  END) AS "ADDRESS2"
 
-FROM future_students_offered_addresses
-INNER JOIN gender_counts ON gender_counts.exp_form_run = future_students_offered_addresses.exp_form_run
+FROM students
 
-WHERE future_students_offered_addresses.exp_form_run = '[[Starting Year and Cohort=query_list(SELECT form_run.form_run FROM form_run WHERE form_run >= '2013 %' ORDER BY form_run)]]'
+INNER JOIN contact ON students.contact_id = contact.contact_id
+INNER JOIN student_status ON students.student_status_id = student_status.student_status_id
+LEFT JOIN priority ON priority.priority_id = students.priority_id
+INNER JOIN view_student_mail_carers mail_carers ON students.student_id = mail_carers.student_id
+LEFT JOIN view_contact_home_address vcha ON vcha.contact_id IN (mail_carers.carer1_contact_id, mail_carers.carer2_contact_id, mail_carers.carer3_contact_id, mail_carers.carer4_contact_id)
+LEFT JOIN view_contact_postal_address vcpa ON vcpa.contact_id IN (mail_carers.carer1_contact_id, mail_carers.carer2_contact_id, mail_carers.carer3_contact_id, mail_carers.carer4_contact_id)
 
-ORDER BY surname, firstname
+ORDER BY surname ASC
