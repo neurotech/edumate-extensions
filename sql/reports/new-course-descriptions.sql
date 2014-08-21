@@ -24,14 +24,15 @@ WITH raw_report AS (
       AND course_report.report_period_id = report_period.report_period_id
   LEFT JOIN summation_report ON summation_report.student_id = student_form_run.student_id
       AND summation_report.report_period_id = report_period.report_period_id
-  WHERE report_period.report_period = '[[Report Period=query_list(select report_period from report_period where academic_year_id = (select academic_year_id from academic_year where academic_year = YEAR(CURRENT DATE)) and completed is null ORDER BY semester_id desc, start_date desc)]]'
+  WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(current date)) AND completed IS null ORDER BY semester_id desc, start_date desc)]]'
 )
 
 SELECT
   department.department AS "DEPARTMENT",
   course.code || ' ' || class.identifier AS "CLASS_CODE",
-  rr.report_period,
-  course_outline.course_outline
+  class.class,
+  course_outline.course_outline,
+  rr.report_period
 
 FROM raw_report rr
 
