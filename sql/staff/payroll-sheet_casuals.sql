@@ -2,8 +2,10 @@ WITH CASUALS_DATA AS (
   SELECT
     CONTACT.SURNAME,
     CONTACT.FIRSTNAME,
-    TO_CHAR((FROM_DATE), 'DD Mon, YYYY') AS "FROM_DATE",
-    TO_DATE,
+    DATE(ac.from_date) AS "FROM_DATE",
+    DATE(ac.to_date) AS "TO_DATE",
+    TO_CHAR((FROM_DATE), 'DD Mon, YYYY') AS "PRETTY_FROM_DATE",
+    TO_CHAR((TO_DATE), 'DD Mon, YYYY') AS "PRETTY_TO_DATE",
     CASE WHEN AC.TIME_WORKED = 1 THEN 'Half Day' ELSE 'Full day' END AS "ALLOCATION"
   
   FROM AVAILABLE_CASUAL AC
@@ -21,8 +23,8 @@ WITH CASUALS_DATA AS (
 SELECT
   CD.SURNAME,
   CD.FIRSTNAME,
-  CD.FROM_DATE AS "DATES",
-  CD.ALLOCATION
+  (CASE WHEN cd.pretty_from_date = cd.pretty_to_date THEN cd.pretty_from_date ELSE (cd.pretty_from_date || ' - ' || cd.pretty_to_date) END) AS "DATES",
+  (CASE WHEN cd.pretty_from_date = cd.pretty_to_date THEN cd.allocation ELSE ((SELECT * FROM TABLE(DB2INST1.business_days_count(cd.from_date, cd.to_date))) || ' days') END) AS "ALLOCATION"
 
 FROM CASUALS_DATA CD
 
