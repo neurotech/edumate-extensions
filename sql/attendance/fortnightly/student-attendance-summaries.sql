@@ -83,7 +83,7 @@ SELECT
   ALC.ABSENCES_YTD AS "Absences YTD",
   ALC.DIFF,
   -- Cumulative Absences and Lates are (Absences for the year to date / Number of termly fortnights passed for the year to date)
-  (ALC.ABSENCES_YTD / ALC.DIFF) AS "Cumulative Absences (Average)",
+  CAST((CAST(ALC.ABSENCES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "Cumulative Absences (Average)",
   ALC.EXPLAINED_LATES AS "Explained Lates YTD",
   ALC.UNEXPLAINED_LATES AS "Unexplained Lates YTD",
   ALC.LATES_YTD AS "Lates YTD",
