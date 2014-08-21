@@ -136,6 +136,4 @@ FROM aew
 
 FULL JOIN gender_counts ON gender_counts.form_run = aew.form_run
 
-WHERE aew.form_run NOT LIKE TO_CHAR((current_date),'YYYY') || ' Year %' and aew.form_run = '2015 Year 07'
-
 ORDER BY aew.form_run ASC, aew.PRIORITY_LEVEL_FULL ASC, aew.status ASC, aew.surname ASC
