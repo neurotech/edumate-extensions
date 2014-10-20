@@ -37,6 +37,7 @@ SELECT DISTINCT
   student_status.student_status,
   priority.priority,
   mail_carers.salutation,
+  carer_emails.email_address,
   (CASE
     WHEN mail_carers.lives_with_flag = 1 THEN 'Yes'
     WHEN mail_carers.lives_with_flag = 0 THEN 'No'
@@ -66,5 +67,6 @@ LEFT JOIN priority ON priority.priority_id = students.priority_id
 INNER JOIN view_student_mail_carers mail_carers ON students.student_id = mail_carers.student_id
 LEFT JOIN view_contact_home_address vcha ON vcha.contact_id IN (mail_carers.carer1_contact_id, mail_carers.carer2_contact_id, mail_carers.carer3_contact_id, mail_carers.carer4_contact_id)
 LEFT JOIN view_contact_postal_address vcpa ON vcpa.contact_id IN (mail_carers.carer1_contact_id, mail_carers.carer2_contact_id, mail_carers.carer3_contact_id, mail_carers.carer4_contact_id)
+LEFT JOIN contact carer_emails ON carer_emails.contact_id IN (mail_carers.carer1_contact_id, mail_carers.carer2_contact_id, mail_carers.carer3_contact_id, mail_carers.carer4_contact_id)
 
-ORDER BY surname ASC
+ORDER BY contact.surname ASC
