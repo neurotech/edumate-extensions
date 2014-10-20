@@ -69,7 +69,9 @@ WITH student_courses AS
         student_courses.class,
         student_courses.teacher,
         SUM(CASE WHEN stud_social_dev.achievement_id is null THEN 0 ELSE 1 END) AS "SCORED",
-        COUNT(DISTINCT social_dev_course.social_dev_id) - 5 AS "SOCIAL_DEVS"
+        (CASE
+          WHEN student_courses.report_period LIKE '%nterim%' THEN COUNT(CASE WHEN social_dev.code LIKE '%INT%' THEN 1 ELSE null END)
+          ELSE COUNT(CASE WHEN social_dev.code NOT LIKE '%INT%' THEN 1 ELSE null END) END) AS "SOCIAL_DEVS"
     FROM student_courses
         -- get social_devs
         LEFT JOIN social_dev_course ON social_dev_course.course_id = student_courses.course_id
