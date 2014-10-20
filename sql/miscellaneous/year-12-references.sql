@@ -9,8 +9,11 @@ WITH report_vars AS (
 all_students AS (
   SELECT
     gass.student_id,
-    ((SELECT * FROM TABLE(DB2INST1.business_days_count(gass.start_date, gass.end_date))) * 0.00273790700698851) AS "TIME_AT_RBC"
+    --((SELECT * FROM TABLE(DB2INST1.business_days_count(gass.start_date, gass.end_date))) * FLOAT(0.00273790700698851)) AS "TIME_AT_RBC"
+    (timestampdiff(16,char(timestamp(gass.end_date) - timestamp(gass.start_date)))) AS "TIME_AT_RBC"
+
   FROM TABLE(EDUMATE.getallstudentstatus(current date)) gass
+
   WHERE gass.student_status_id = 5 AND gass.last_form_run_id = (SELECT form_run_id FROM form_run WHERE form_id = 14 AND form_run LIKE TO_CHAR((current date), 'YYYY') || '%')
 ),
 
@@ -140,7 +143,8 @@ SELECT
   contact.preferred_name,
   hr.class AS "HOMEROOM",
   contact.birthdate AS "DOB",
-  CAST(students.time_at_rbc AS DECIMAL(3,2)) AS "TIME_AT_RBC",
+  students.time_at_rbc,
+  --CAST(students.time_at_rbc AS DECIMAL(3,2)) AS "TIME_AT_RBC",
   --CAST(ROUND(students.time_at_rbc) AS DECIMAL(3,2)) AS "TIME_AT_RBC",
   gass.start_date,
   gass.end_date,
