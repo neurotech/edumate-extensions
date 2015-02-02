@@ -1,8 +1,5 @@
 WITH report_vars AS (
-  SELECT
-    (current date) AS "REPORT_DATE"
-    --('[[As at=date]]') AS "REPORT_DATE"
-   
+  SELECT ('[[As at=date]]') AS "REPORT_DATE"
   FROM SYSIBM.SYSDUMMY1
 ),
 
@@ -42,6 +39,7 @@ award_totals AS (
 )
 
 SELECT
+  (CASE WHEN ROW_NUMBER() OVER () = 1 THEN TO_CHAR((SELECT report_date FROM report_vars), 'DD Month, YYYY') ELSE null END) AS "AS_AT",
   what_happened.what_happened AS "AWARD",
   (CASE WHEN award_counts.count IS NULL THEN 0 ELSE award_counts.count END) AS "COUNT",
   (CASE WHEN ROW_NUMBER() OVER () = 1 THEN (SELECT total FROM award_totals) ELSE null END) AS "TOTAL_AWARDS_YTD"
