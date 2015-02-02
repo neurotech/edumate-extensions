@@ -1,7 +1,7 @@
 WITH report_vars AS (
   SELECT
-    (current date) AS "REPORT_YEAR"
-
+    (current date) AS "REPORT_YEAR",
+    ('[[Form Run=query_list(SELECT form_run.form_run FROM form_run INNER JOIN form ON form.form_id = form_run.form_id INNER JOIN timetable ON timetable.timetable_id = form_run.timetable_id INNER JOIN academic_year ON academic_year.academic_year_id = timetable.academic_year_id WHERE YEAR(timetable.computed_start_date) = YEAR(current date) OR YEAR(timetable.computed_start_date) = YEAR(current date - 1 YEARS) AND YEAR(timetable.computed_end_date) != YEAR(current date - 1 YEARS) ORDER BY form.form, form_run.form_run)]]') AS "REPORT_FORM"
   FROM SYSIBM.SYSDUMMY1
 ),
 
@@ -11,9 +11,9 @@ homerooms AS (
   WHERE
     vsce.class_type_id = 2
     AND
-    vsce.class LIKE '12%'
+    vsce.class LIKE SUBSTR(('[[Form Run=query_list(SELECT form_run.form_run FROM form_run INNER JOIN form ON form.form_id = form_run.form_id INNER JOIN timetable ON timetable.timetable_id = form_run.timetable_id INNER JOIN academic_year ON academic_year.academic_year_id = timetable.academic_year_id WHERE YEAR(timetable.computed_start_date) = YEAR(current date) OR YEAR(timetable.computed_start_date) = YEAR(current date - 1 YEARS) AND YEAR(timetable.computed_end_date) != YEAR(current date - 1 YEARS) ORDER BY form.form, form_run.form_run)]]'),11,2) || ' %'
     AND
-    (vsce.start_date < (current date)
+    (vsce.start_date <= (current date)
     AND
     vsce.end_date >= (current date))
 ),
@@ -23,7 +23,6 @@ student_awards AS (
     sw.student_id,
     student.student_number,
     ROW_NUMBER() OVER (PARTITION BY sw.student_id, wh.what_happened) AS "SORT_ORDER",
-    --(CASE WHEN student_contact.preferred_name IS null THEN student_contact.firstname ELSE student_contact.preferred_name END) AS "STUDENT_FIRSTNAME",
     student_contact.preferred_name AS "STUDENT_PREFERRED_NAME",
     student_contact.firstname AS "STUDENT_FIRSTNAME",
     student_contact.surname AS "STUDENT_SURNAME",
@@ -32,7 +31,6 @@ student_awards AS (
     staff_contact.surname AS "STAFF_SURNAME",
     vsce.class AS "HOMEROOM",
     (CASE WHEN (ROW_NUMBER() OVER (PARTITION BY sw.student_id, wh.what_happened)) = 1 THEN wh.what_happened || ' in ' ELSE '' END) AS "AWARD",
-    --wh.what_happened AS "AWARD",
     course.print_name AS "COURSE",
     class.class,
     class.class_id,
@@ -65,30 +63,30 @@ student_awards AS (
   INNER JOIN view_student_class_enrolment vsce ON vsce.student_id = sw.student_id AND (vsce.class_type_id = 2 AND vsce.start_date < (current date) AND vsce.end_date > (current date))
   
   WHERE
-/*
-WHAT_HAPPENED_ID  |  WHAT_HAPPENED
-------------------|------------------------------------------------------|
-1                 |   Certificate of Merit
-49                | 	Letter of Commendation
-145               | 	St Benedict Award: Leadership and Service
-146               | 	Leadership and Service Medallion
-147               | 	St Scholastica Award: College Dux
-148               | 	Academic Medallion
-149               | 	Archbishop of Sydney: Award for Excellence
-150               | 	Caltex Award
-151               | 	Pierre de Coubertin
-152               | 	Reuben F Scarf Award
-153               | 	ADF Long Tan Youth Leadership and Teamwork Award
-154               | 	Academic Excellence
-155               | 	Academic Merit
-156               |   Consistent Effort
-*/
-    sw.what_happened_id IN (154, 155, 156)
-    --sw.what_happened_id in (145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156)
-    --sw.what_happened_id in (145, 146, 147, 148, 149, 150, 151, 152, 153)
-    AND
-    YEAR(sw.date_entered) = YEAR((SELECT report_year FROM report_vars))
-  
+  /*
+  WHAT_HAPPENED_ID  |  WHAT_HAPPENED
+  ------------------|------------------------------------------------------|
+  1                 |   Certificate of Merit
+  49                | 	Letter of Commendation
+  145               | 	St Benedict Award: Leadership and Service         -
+  146               | 	Leadership and Service Medallion                   |
+  147               | 	St Scholastica Award: College Dux                  |
+  148               | 	Academic Medallion                                 |
+  149               | 	Archbishop of Sydney: Award for Excellence         |
+  150               | 	Caltex Award                                       |
+  151               | 	Pierre de Coubertin                                |
+  152               | 	Reuben F Scarf Award                               |
+  153               | 	ADF Long Tan Youth Leadership and Teamwork Award  -
+  154               | 	Academic Excellence                               -
+  155               | 	Academic Merit                                     |
+  156               |   Consistent Effort                                 -
+  */
+  sw.what_happened_id IN (154, 155, 156)
+  --sw.what_happened_id in (145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156)
+  --sw.what_happened_id in (145, 146, 147, 148, 149, 150, 151, 152, 153)
+  AND
+  YEAR(sw.date_entered) = YEAR((SELECT report_year FROM report_vars))
+
   --ORDER BY vsce.class, student_contact.surname, student_contact.preferred_name, student_contact.firstname, wh.what_happened DESC, course.print_name
 ),
 
@@ -103,7 +101,7 @@ award_winners AS (
 )
 
 SELECT
-  (CASE WHEN class.print_name LIKE '%12 O%' THEN '12 OConnor' ELSE class.print_name END) AS "HOMEROOM",
+  class.print_name AS "HOMEROOM",
   (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
   contact.surname,
   award_winners.awards
