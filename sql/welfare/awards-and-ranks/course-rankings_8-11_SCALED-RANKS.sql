@@ -57,32 +57,58 @@ WITH selected_period AS
     GROUP BY report_period.report_period_id, student.student_id, course.course_id
     ),
 
+    sdmean AS (
+      SELECT
+        course_id,
+        STDDEV(final_mark) AS "SD",
+        AVG(final_mark) AS "MEAN"
+        
+      FROM raw_course_results
+      
+      GROUP BY course_id
+    ),
+    
+    scaledmarks AS (
+      SELECT
+        raw_course_results.course_id,
+        raw_course_results.student_id,
+        ((raw_course_results.final_mark - sdmean.mean) / sdmean.sd * 12.5 + 60) AS "SCALED_MARK"
+
+      FROM raw_course_results
+      
+      INNER JOIN sdmean ON sdmean.course_id = raw_course_results.course_id
+    ),
+
     ordered_task_results AS
     (
     SELECT
-        RANK() OVER (PARTITION BY course.course_id ORDER BY raw_course_results.final_mark DESC) AS sort_order,
+        RANK() OVER (PARTITION BY course.course_id ORDER BY scaledmarks.scaled_mark DESC) AS sort_order,
         raw_course_results.student_id,
         course.course_id,      
         course.units,
-        SUM(units) OVER (PARTITION BY raw_course_results.student_id ORDER BY final_mark DESC) AS RANKED_UNITS,
-        raw_course_results.final_mark,
-        RANK() OVER (PARTITION BY course.course_id ORDER BY ROUND(raw_course_results.final_mark,0) DESC) AS COURSE_RANK,
+        SUM(units) OVER (PARTITION BY scaledmarks.student_id ORDER BY scaledmarks.scaled_mark DESC) AS RANKED_UNITS,
+        scaledmarks.scaled_mark,
+        --RANK() OVER (PARTITION BY course.course_id ORDER BY ROUND(raw_course_results.final_mark,0) DESC) AS COURSE_RANK,
+        RANK() OVER (PARTITION BY course.course_id ORDER BY ROUND(scaledmarks.scaled_mark,0) DESC) AS "COURSE_RANK",
         --RANK() OVER (PARTITION BY course.course_id ORDER BY raw_course_results.final_mark DESC) AS COURSE_RANK,
         AVG(raw_course_results.final_mark) OVER (PARTITION BY course.course_id) AS "COURSE_AVERAGE",
         AVG(raw_course_results.final_mark) OVER (PARTITION BY 1) AS "ALL_AVERAGE",
-        COUNT(student_id) OVER (PARTITION BY course.course) AS STUDENTS,
+        COUNT(raw_course_results.student_id) OVER (PARTITION BY course.course) AS STUDENTS,
         COALESCE(course_final_mark.weight,100) AS WEIGHT,
         --raw_course_results.s1_tasks,
         raw_course_results.total_tasks,
         raw_course_results.total_results
+   
     FROM raw_course_results
+    
+        INNER JOIN scaledmarks ON scaledmarks.course_id = raw_course_results.course_id AND scaledmarks.student_id = raw_course_results.student_id
         INNER JOIN course ON course.course_id = raw_course_results.course_id
         LEFT JOIN course_final_mark ON course_final_mark.course_id = course.course_id
             AND course_final_mark.report_period_id = raw_course_results.report_period_id
     -- Must have results for 2/3rd of the tasks
     WHERE raw_course_results.total_results  >= FLOAT(raw_course_results.total_tasks)*0.666
     ),
-
+    
     student_course_results AS
     (
     SELECT
@@ -93,22 +119,28 @@ WITH selected_period AS
         course_rank AS RANK,
         (CASE
           WHEN course_rank = 1 THEN '**'
-          --WHEN course_rank <= (FLOAT(students) / 10 + 0.5) THEN '*'
           WHEN FLOAT(students) BETWEEN 1 AND 6 THEN (CASE WHEN course_rank <= 1 THEN '**' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 7 AND 12 THEN (CASE WHEN course_rank <= 2 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 13 AND 20 THEN (CASE WHEN course_rank <= 3 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 20 AND 40 THEN (CASE WHEN course_rank <= 4 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) > 40 THEN (CASE WHEN course_rank <= 5 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 7 AND 17 THEN (CASE WHEN course_rank <= 2 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 18 AND 32 THEN (CASE WHEN course_rank <= 3 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 33 AND 50 THEN (CASE WHEN course_rank <= 4 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 51 AND 70 THEN (CASE WHEN course_rank <= 5 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 71 AND 92 THEN (CASE WHEN course_rank <= 6 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 93 AND 117 THEN (CASE WHEN course_rank <= 7 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 118 AND 146 THEN (CASE WHEN course_rank <= 8 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 146 AND 180 THEN (CASE WHEN course_rank <= 9 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) > 181 THEN (CASE WHEN course_rank <= 10 THEN '*' ELSE '' END)
           ELSE ''
         END) AS AW,
-        TO_CHAR(ordered_task_results.final_mark,'999') AS OVERALL_MARK,
+        TO_CHAR(ordered_task_results.scaled_mark,'999') AS SCALED_MARK,
         CAST(ROUND(course_average,2) AS DECIMAL(5,2)) AS "COURSE_AVERAGE",
         CAST(ROUND(all_average,2) AS DECIMAL(5,2)) AS "ALL_AVERAGE",
         UPPER(contact.surname)||', '||contact.firstname||COALESCE(' ('||contact.preferred_name||')','') AS NAME,
         student_form.form AS YR,
         student.student_number,
         CASE WHEN ordered_task_results.ranked_units <= 10 THEN 'Yes' WHEN ordered_task_results.ranked_units = 11 AND ordered_task_results.units = 2 THEN 'Yes' ELSE 'No' END AS IN_TOP10UNITS
+    
     FROM ordered_task_results
+        
         INNER JOIN course ON course.course_id = ordered_task_results.course_id
         INNER JOIN student ON student.student_id = ordered_task_results.student_id
         INNER JOIN contact ON contact.contact_id = student.contact_id
@@ -117,15 +149,17 @@ WITH selected_period AS
         INNER JOIN subject ON subject.subject_id = course.subject_id
         INNER JOIN department ON department.department_id = subject.department_id
     )
+    
 
 SELECT
+  student_course_results.sort_order,
   (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
   (SELECT print_name FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD_PRINT_NAME",
   department,
   (CASE WHEN student_course_results.sort_order = 1 THEN course ELSE null END) AS "COURSE",
-  rank,
   aw,
-  overall_mark,
+  rank,
+  scaled_mark,
   (CASE WHEN student_course_results.sort_order = 1 THEN course_average ELSE null END) AS "COURSE_AVERAGE",
   all_average,
   name,

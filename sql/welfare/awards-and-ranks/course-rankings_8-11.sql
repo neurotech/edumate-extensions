@@ -93,12 +93,16 @@ WITH selected_period AS
         course_rank AS RANK,
         (CASE
           WHEN course_rank = 1 THEN '**'
-          --WHEN course_rank <= (FLOAT(students) / 10 + 0.5) THEN '*'
           WHEN FLOAT(students) BETWEEN 1 AND 6 THEN (CASE WHEN course_rank <= 1 THEN '**' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 7 AND 12 THEN (CASE WHEN course_rank <= 2 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 13 AND 20 THEN (CASE WHEN course_rank <= 3 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 20 AND 40 THEN (CASE WHEN course_rank <= 4 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) > 40 THEN (CASE WHEN course_rank <= 5 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 7 AND 17 THEN (CASE WHEN course_rank <= 2 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 18 AND 32 THEN (CASE WHEN course_rank <= 3 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 33 AND 50 THEN (CASE WHEN course_rank <= 4 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 51 AND 70 THEN (CASE WHEN course_rank <= 5 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 71 AND 92 THEN (CASE WHEN course_rank <= 6 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 93 AND 117 THEN (CASE WHEN course_rank <= 7 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 118 AND 146 THEN (CASE WHEN course_rank <= 8 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 146 AND 180 THEN (CASE WHEN course_rank <= 9 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) > 181 THEN (CASE WHEN course_rank <= 10 THEN '*' ELSE '' END)
           ELSE ''
         END) AS AW,
         TO_CHAR(ordered_task_results.final_mark,'999') AS OVERALL_MARK,

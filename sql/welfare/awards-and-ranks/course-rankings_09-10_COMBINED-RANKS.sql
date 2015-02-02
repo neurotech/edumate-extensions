@@ -24,6 +24,29 @@ WITH selected_period AS
         report_period.report_period_id,
         student.student_id,
         course.course_id,
+        (CASE
+          -- Random electives
+          WHEN course.course IN ('09 French', '10 French') THEN '09/10 French'
+          WHEN course.course IN ('09 Italian', '10 Italian') THEN '09/10 Italian'
+          WHEN course.course IN ('09 Commerce', '10 Commerce') THEN '09/10 Commerce'
+          WHEN course.course IN ('09 Physical Activity and Sports Science', '10 Physical Activity and Sports Science') THEN '09/10 Physical Activity and Sports Science'
+          WHEN course.course IN ('09 iThink', '10 iThink') THEN '09/10 iThink'
+        
+          -- CAPA
+          WHEN course.course IN ('09 Dance', '10 Dance') THEN '09/10 Dance'
+          WHEN course.course IN ('09 Drama', '10 Drama') THEN '09/10 Drama'
+          WHEN course.course IN ('09 Music', '10 Music') THEN '09/10 Music'
+          WHEN course.course IN ('09 Photographic and Digital Media', '10 Photographic and Digital Media') THEN '09/10 Photographic and Digital Media'
+          WHEN course.course IN ('09 Visual Arts', '10 Visual Arts') THEN '09/10 Visual Arts'
+        
+          -- TAS
+          WHEN course.course IN ('09 Food Technology', '10 Food Technology') THEN '09/10 Food Technology'
+          WHEN course.course IN ('09 Industrial Technology (engineering) 100', '10 Industrial Technology (engineering) 100') THEN '09/10 Industrial Technology (engineering) 100'
+          WHEN course.course IN ('09 Information Software Technology', '10 Information Software Technology') THEN '09/10 Information Software Technology'
+          WHEN course.course IN ('09 Textiles Technology', '10 Textiles Technology') THEN '09/10 Textiles Technology'
+        
+          ELSE course.course
+        END) AS "COURSE",
         CAST(ROUND(SUM(FLOAT(stud_task_raw_mark.raw_mark) / FLOAT(task.mark_out_of) * FLOAT(task.weighting) * (CASE WHEN course.units = 1 THEN 50 ELSE 100 END)) / SUM(task.weighting),3) AS DECIMAL(6,3)) AS FINAL_MARK,
         COUNT(coursework_task.coursework_task_id) AS TOTAL_TASKS,
         COUNT(stud_task_raw_mark.raw_mark) AS TOTAL_RESULTS
@@ -54,23 +77,24 @@ WITH selected_period AS
             AND stud_task_raw_mark.task_id = task.task_id
     WHERE report_period_course.course_id is null
         AND task.mark_out_of > 0 AND task.weighting > 0
-    GROUP BY report_period.report_period_id, student.student_id, course.course_id
+    GROUP BY report_period.report_period_id, student.student_id, course.course, course.course_id
     ),
 
     ordered_task_results AS
     (
     SELECT
-        RANK() OVER (PARTITION BY course.course_id ORDER BY raw_course_results.final_mark DESC) AS sort_order,
+        RANK() OVER (PARTITION BY raw_course_results.course ORDER BY raw_course_results.final_mark DESC) AS sort_order,
         raw_course_results.student_id,
-        course.course_id,      
+        course.course_id,
+        raw_course_results.course,
         course.units,
         SUM(units) OVER (PARTITION BY raw_course_results.student_id ORDER BY final_mark DESC) AS RANKED_UNITS,
         raw_course_results.final_mark,
-        RANK() OVER (PARTITION BY course.course_id ORDER BY ROUND(raw_course_results.final_mark,0) DESC) AS COURSE_RANK,
+        RANK() OVER (PARTITION BY raw_course_results.course ORDER BY ROUND(raw_course_results.final_mark,0) DESC) AS COURSE_RANK,
         --RANK() OVER (PARTITION BY course.course_id ORDER BY raw_course_results.final_mark DESC) AS COURSE_RANK,
-        AVG(raw_course_results.final_mark) OVER (PARTITION BY course.course_id) AS "COURSE_AVERAGE",
+        AVG(raw_course_results.final_mark) OVER (PARTITION BY raw_course_results.course) AS "COURSE_AVERAGE",
         AVG(raw_course_results.final_mark) OVER (PARTITION BY 1) AS "ALL_AVERAGE",
-        COUNT(student_id) OVER (PARTITION BY course.course) AS STUDENTS,
+        COUNT(student_id) OVER (PARTITION BY raw_course_results.course) AS STUDENTS,
         COALESCE(course_final_mark.weight,100) AS WEIGHT,
         --raw_course_results.s1_tasks,
         raw_course_results.total_tasks,
@@ -89,16 +113,21 @@ WITH selected_period AS
         ordered_task_results.sort_order,
         department.department,
         subject.subject,
-        COALESCE(course.course,course.print_name,course.course) AS COURSE,
+        --COALESCE(course.course,course.print_name,course.course) AS COURSE,
+        ordered_task_results.course,
         course_rank AS RANK,
         (CASE
           WHEN course_rank = 1 THEN '**'
-          --WHEN course_rank <= (FLOAT(students) / 10 + 0.5) THEN '*'
           WHEN FLOAT(students) BETWEEN 1 AND 6 THEN (CASE WHEN course_rank <= 1 THEN '**' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 7 AND 12 THEN (CASE WHEN course_rank <= 2 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 13 AND 20 THEN (CASE WHEN course_rank <= 3 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) BETWEEN 20 AND 40 THEN (CASE WHEN course_rank <= 4 THEN '*' ELSE '' END)
-          WHEN FLOAT(students) > 40 THEN (CASE WHEN course_rank <= 5 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 7 AND 17 THEN (CASE WHEN course_rank <= 2 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 18 AND 32 THEN (CASE WHEN course_rank <= 3 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 33 AND 50 THEN (CASE WHEN course_rank <= 4 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 51 AND 70 THEN (CASE WHEN course_rank <= 5 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 71 AND 92 THEN (CASE WHEN course_rank <= 6 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 93 AND 117 THEN (CASE WHEN course_rank <= 7 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 118 AND 146 THEN (CASE WHEN course_rank <= 8 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) BETWEEN 146 AND 180 THEN (CASE WHEN course_rank <= 9 THEN '*' ELSE '' END)
+          WHEN FLOAT(students) > 181 THEN (CASE WHEN course_rank <= 10 THEN '*' ELSE '' END)
           ELSE ''
         END) AS AW,
         TO_CHAR(ordered_task_results.final_mark,'999') AS OVERALL_MARK,
@@ -135,4 +164,4 @@ SELECT
 
 FROM student_course_results
 
-ORDER BY department, subject, course, rank
+ORDER BY department, student_course_results.course, rank
