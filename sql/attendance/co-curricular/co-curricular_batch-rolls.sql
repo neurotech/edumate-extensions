@@ -1,11 +1,14 @@
 WITH cc_day AS (
-  SELECT ('[[Rolls for=date]]') AS "CC_DAY"
+  SELECT
+    '[[As at=date]]' AS "CC_DAY",
+    '[[As at=date]]' AS "CC_ATTEND_DAY"
+  
   FROM sysibm.sysdummy1
 ),
 
 term_vars AS (
   SELECT
-    (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (SELECT cc_day FROM cc_day) BETWEEN start_date AND end_date AND timetable.timetable LIKE '%Year 12') AS "JUNIORS_TERM_ID",
+    (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (current date) BETWEEN start_date AND end_date AND timetable.timetable LIKE '%Year 12' FETCH FIRST 1 ROW ONLY) AS "JUNIORS_TERM_ID",
     (SELECT term_id FROM term INNER JOIN timetable ON timetable.timetable_id = term.timetable_id WHERE (SELECT cc_day FROM cc_day) BETWEEN start_date AND end_date AND timetable.timetable NOT LIKE '%Year 12' AND timetable.timetable NOT LIKE '%Detentions%') AS "SENIORS_TERM_ID"
 
   FROM sysibm.sysdummy1
@@ -58,7 +61,7 @@ student_attendance AS (
   INNER JOIN daily_attendance_status status ON status.daily_attendance_status_id = da.am_attendance_status_id
 
   WHERE
-    da.date_on = (SELECT cc_day FROM cc_day)
+    da.date_on = (SELECT cc_attend_day FROM cc_day)
     AND
     da.am_attendance_status_id IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
 )
@@ -92,7 +95,7 @@ INNER JOIN student ON student.student_id = allstudents.student_id
 INNER JOIN contact ON contact.contact_id = student.contact_id
 
 INNER JOIN view_student_class_enrolment vsce ON vsce.student_id = allstudents.student_id
-INNER JOIN class hr ON hr.class_id = vsce.class_id AND hr.class_type_id = 2 AND vsce.academic_year = TO_CHAR((current date), 'YYYY') AND vsce.end_date > (current date)
+INNER JOIN class hr ON hr.class_id = vsce.class_id AND hr.class_type_id = 2 AND vsce.academic_year = TO_CHAR((current date), 'YYYY') AND vsce.end_date > (current date) AND vsce.class NOT LIKE '11 Home Room %'
 
 LEFT JOIN student_attendance sa ON sa.student_id = allstudents.student_id
 
