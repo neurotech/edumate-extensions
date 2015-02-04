@@ -35,7 +35,7 @@ SELECT
   contact.surname,
   SUBSTR(gender.gender, 1,1) AS "GENDER",
   active_homerooms.class || ' (' || homeroom_counts.homeroom_total || ' students)' AS "CLASS",
-  vsfr.form_run,
+  form.short_name AS "FORM",
   ('Generated on: ' || TO_CHAR((current date), 'DD Month, YYYY') || ' at ' || CHAR(TIME(CURRENT TIMESTAMP),USA)) AS "GENERATED"
 
 FROM active_homerooms
@@ -44,6 +44,7 @@ INNER JOIN student ON student.student_id = active_homerooms.student_id
 INNER JOIN contact ON contact.contact_id = student.contact_id
 INNER JOIN gender ON gender.gender_id = contact.gender_id
 INNER JOIN view_student_form_run vsfr ON vsfr.student_id = active_homerooms.student_id AND vsfr.start_date <= (SELECT report_date FROM report_vars) AND vsfr.end_date >= (SELECT report_date FROM report_vars)
+INNER JOIN form ON form.form_id = vsfr.form_id
 INNER JOIN homeroom_counts ON homeroom_counts.class_id = active_homerooms.class_id
 
 ORDER BY active_homerooms.class, vsfr.form_run, contact.surname, contact.firstname, contact.preferred_name
