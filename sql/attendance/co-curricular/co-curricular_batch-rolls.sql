@@ -1,5 +1,7 @@
 WITH cc_day AS (
   SELECT
+    --(current date + 1 DAY) AS "CC_DAY",
+    --(current date + 1 DAY) AS "CC_ATTEND_DAY"
     '[[As at=date]]' AS "CC_DAY",
     '[[As at=date]]' AS "CC_ATTEND_DAY"
   
@@ -36,19 +38,19 @@ cc_classes AS (
 
 counts as (
   SELECT
-    vsce.class_id, count(vsce.student_id) AS "TOTAL"
+    cc_classes.class_id, count(vsce.student_id) AS "TOTAL"
+    
   FROM cc_classes
-  INNER JOIN view_student_class_enrolment vsce ON vsce.class_id = cc_classes.class_id AND
-    (vsce.start_date <= (SELECT cc_day FROM cc_day) AND vsce.end_date >= (SELECT cc_day FROM cc_day))
+
+  LEFT JOIN view_student_class_enrolment vsce ON vsce.class_id = cc_classes.class_id
   
-  GROUP BY vsce.class_id
+  GROUP BY cc_classes.class_id
 ),
 
 allstudents AS (
-  SELECT vsce.class_id, vsce.student_id
+  SELECT cc_classes.class_id, vsce.student_id
   FROM cc_classes
-  INNER JOIN view_student_class_enrolment vsce ON vsce.class_id = cc_classes.class_id AND
-    (vsce.start_date <= (SELECT cc_day FROM cc_day) AND vsce.end_date >= (SELECT cc_day FROM cc_day))
+  LEFT JOIN view_student_class_enrolment vsce ON vsce.class_id = cc_classes.class_id
 ),
 
 student_attendance AS (
@@ -95,7 +97,7 @@ INNER JOIN student ON student.student_id = allstudents.student_id
 INNER JOIN contact ON contact.contact_id = student.contact_id
 
 INNER JOIN view_student_class_enrolment vsce ON vsce.student_id = allstudents.student_id
-INNER JOIN class hr ON hr.class_id = vsce.class_id AND hr.class_type_id = 2 AND vsce.academic_year = TO_CHAR((current date), 'YYYY') AND vsce.end_date > (current date) AND vsce.class NOT LIKE '11 Home Room %'
+INNER JOIN class hr ON hr.class_id = vsce.class_id AND hr.class_type_id = 2 AND vsce.academic_year = YEAR(current date) AND vsce.end_date > (current date)
 
 LEFT JOIN student_attendance sa ON sa.student_id = allstudents.student_id
 
