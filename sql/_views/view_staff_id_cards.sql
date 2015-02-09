@@ -3,14 +3,16 @@
 
 CREATE OR REPLACE VIEW DB2INST1.VIEW_STAFF_ID_CARDS (
   STAFF_NUMBER,
+  STAFF_LIBRARY_NUMBER,
   SURNAME,
   FIRSTNAME,
   GENDER,
   HOUSE
 ) AS
 
-SELECT
-  ('B' || staff.staff_number || '1844') AS "STAFF_NUMBER",
+SELECT DISTINCT
+  staff.staff_number,
+  ('B' || staff.staff_number || '1844') AS "STAFF_LIBRARY_NUMBER",
   UPPER(CASE
     WHEN contact.surname = 'O&#039;Brien' THEN 'O''Brien'
     WHEN contact.surname = 'O&#039;Shea' THEN 'O''Shea'
@@ -28,8 +30,12 @@ INNER JOIN gender ON gender.gender_id = contact.gender_id
 LEFT JOIN salutation ON salutation.salutation_id = contact.salutation_id
 LEFT JOIN house ON house.house_id = staff.house_id
 
--- The group with the 'groups_id' of 386 is 'Current Staff'
+-- | GROUP_ID | GROUP         |
+-- |----------|---------------|
+-- | 386      | Current Staff |
+-- | 483      | Stewards      |
+
 WHERE
-  gm.groups_id = 386
+  gm.groups_id IN (386,483)
   AND
   (gm.effective_end > (current date) OR gm.effective_end IS null)
