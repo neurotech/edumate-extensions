@@ -98,10 +98,10 @@ WITH course_units(unit_number) AS
         INNER JOIN subject ON subject.subject_id = course.subject_id
         INNER JOIN department ON department.department_id = subject.department_id
         -- get all tasks and results (unscaled)
-        INNER JOIN coursework_task ON coursework_task.course_id = course.course_id
+        LEFT JOIN coursework_task ON coursework_task.course_id = course.course_id
             AND coursework_task.due_date BETWEEN included_courses.start_date AND included_courses.end_date
-        INNER JOIN task ON task.task_id = coursework_task.task_id
-        INNER JOIN stud_task_raw_mark ON stud_task_raw_mark.task_id = task.task_id
+        LEFt JOIN task ON task.task_id = coursework_task.task_id
+        LEFT JOIN stud_task_raw_mark ON stud_task_raw_mark.task_id = task.task_id
     WHERE task.mark_out_of > 0 AND task.weighting > 0 AND stud_task_raw_mark.student_id IN (SELECT student_id FROM student_form)
     GROUP BY included_courses.report_period_id, coursework_task.academic_year_id, stud_task_raw_mark.student_id, department.department_id, course.course_id, course.course, course.units
     ),
@@ -232,9 +232,9 @@ WITH course_units(unit_number) AS
     best_x_units AS
     (
     SELECT
-        report_period_id,
+        ranked_unit_results.report_period_id,
         student_id,
-        course_id,
+        ranked_unit_results.course_id,
         core_or_elective,
         total_units,
         final_mark,
@@ -257,12 +257,33 @@ WITH course_units(unit_number) AS
         (CASE
           WHEN core_or_elective = 'C' THEN MAX(CASE WHEN core_or_elective = 'C' AND ranked_units <= 14 THEN course_rank ELSE null END)
           WHEN core_or_elective = 'E' THEN MAX(CASE WHEN core_or_elective = 'E' AND ranked_units <= 2 THEN course_rank ELSE null END)
-        END) AS "BEST_RANK"
+        END) AS "BEST_RANK",
+        course_final_mark.weight
 
     FROM ranked_unit_results
 
-    GROUP BY report_period_id, student_id, course_id, core_or_elective, total_units, final_mark, final_scaled_mark, course_rank
+    LEFT JOIN course_final_mark ON course_final_mark.course_id = ranked_unit_results.course_id
+      AND course_final_mark.report_period_id = ranked_unit_results.report_period_id
+
+    GROUP BY ranked_unit_results.report_period_id, student_id, ranked_unit_results.course_id, course_final_mark.weight, core_or_elective, total_units, final_mark, final_scaled_mark, course_rank
     ),
+
+	test AS (
+	SELECT
+	  student_id,
+	  --course.course,
+	  SUM(FLOAT(best_rank)*COALESCE(course_final_mark.weight,1)*best_units) AS "SUM_OF_RANK_TIMES_WEIGHT_TIMES_BESTUNITS",
+	  SUM(COALESCE(course_final_mark.weight,1)*best_units) AS "SUM_OF_WEIGHT_TIMES_BEST_UNITS"
+	  
+	FROM best_x_units
+	
+    INNER JOIN course ON course.course_id = best_x_units.course_id
+    
+    LEFT JOIN course_final_mark ON course_final_mark.course_id = course.course_id
+      AND course_final_mark.report_period_id = best_x_units.report_period_id
+    
+    GROUP BY student_id
+	),
 
     best_courses AS
     (
@@ -322,8 +343,24 @@ WITH course_units(unit_number) AS
     LEFT JOIN student_form ON student_form.student_id = student.student_id
     )
 
-/* SELECT * FROM ranked_unit_results WHERE student_id = 21988
-ORDER BY core_or_elective, course */
+-- Sybilla Gordon: 21988
+--SELECT * FROM included_courses WHERE course_id IN (710, 184)
+--SELECT * FROM included_students
+--SELECT * FROM raw_course_results WHERE student_id = 22130
+--SELECT * FROM raw_course_results WHERE course_id IN (710,184)
+--SELECT * FROM course_rankings WHERE student_id = 21988
+--SELECT * FROM final_scores WHERE student_id = 21988 ORDER BY CORE_OR_ELECTIVE, COURSE_RANK
+--SELECT * FROM unit_results WHERE student_id = 21988 and unit_number = 1 ORDER BY CORE_OR_ELECTIVE, COURSE_RANK
+--SELECT * FROM ranked_unit_results WHERE student_id = 22130
+--SELECT * FROM best_x_units WHERE student_id IN (21988,22130) ORDER BY student_id
+--SELECT * FROM best_courses WHERE student_id IN (21988,22130) ORDER BY student_id
 
-SELECT * FROM raw_report
-ORDER BY pos
+SELECT * FROM test WHERE student_id IN (21988,22130) ORDER BY student_id
+
+-- Juliette Schimschal: 22130
+
+
+--- SUM(FLOAT(best_rank)*COALESCE(course_final_mark.weight,1)*best_units) / SUM(COALESCE(course_final_mark.weight,1)*best_units)
+
+/* SELECT * FROM raw_report
+ORDER BY pos */
