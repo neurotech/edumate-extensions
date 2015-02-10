@@ -5,24 +5,26 @@ SELECT
   CONTACT.CONTACT_ID,
   CONTACT.SURNAME,
   CONTACT.FIRSTNAME,
+  gass.start_date,
   FORM_RUN.FORM_RUN,
-  VSCE.CLASS
+  VSCE.CLASS,
+  (CASE WHEN teacher_contact.preferred_name IS null THEN teacher_contact.firstname ELSE teacher_contact.preferred_name END) || ' ' || teacher_contact.surname AS "HR_TEACHER"
 
-FROM TABLE(EDUMATE.GET_CURRENTLY_ENROLED_STUDENTS(CURRENT DATE)) CES
+FROM TABLE(EDUMATE.getallstudentstatus(current date)) gass
 
-INNER JOIN STUDENT ON CES.STUDENT_ID = STUDENT.STUDENT_ID
+INNER JOIN STUDENT ON gass.STUDENT_ID = STUDENT.STUDENT_ID
 INNER JOIN CONTACT ON STUDENT.CONTACT_ID = CONTACT.CONTACT_ID
 INNER JOIN FORM_RUN ON FORM_RUN.FORM_RUN_ID =
 (
     SELECT FORM_RUN.FORM_RUN_ID
     FROM TABLE(EDUMATE.GET_ENROLED_STUDENTS_FORM_RUN(CURRENT DATE)) GRSFR
     INNER JOIN FORM_RUN ON GRSFR.FORM_RUN_ID = FORM_RUN.FORM_RUN_ID
-    WHERE GRSFR.STUDENT_ID = CES.STUDENT_ID
+    WHERE GRSFR.STUDENT_ID = gass.STUDENT_ID
     FETCH FIRST 1 ROW ONLY
 )
 INNER JOIN FORM ON FORM.FORM_ID = FORM_RUN.FORM_ID
 -- Get Homeroom
-LEFT JOIN view_student_class_enrolment vsce ON vsce.student_id = ces.student_id AND
+LEFT JOIN view_student_class_enrolment vsce ON vsce.student_id = gass.student_id AND
 (
   vsce.class_type_id = 2
   AND
@@ -32,11 +34,18 @@ LEFT JOIN view_student_class_enrolment vsce ON vsce.student_id = ces.student_id 
   AND
   vsce.end_date >= (current date)
 )
+LEFT JOIN class_teacher ON class_teacher.class_id = vsce.class_id
+LEFT JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
+LEFT JOIN contact teacher_contact ON teacher_contact.contact_id = teacher.contact_id
 
 LEFT JOIN VIEW_CONTACT_HOME_ADDRESS VCHA ON CONTACT.CONTACT_ID = VCHA.CONTACT_ID
 
 WHERE
-  CES.STUDENT_ID = (
+  gass.student_status_id = 5
+  AND
+  YEAR(gass.start_date) != YEAR(current date)
+  AND
+  gass.STUDENT_ID = (
     SELECT CESINNER.STUDENT_ID
     FROM TABLE(EDUMATE.GET_CURRENTLY_ENROLED_STUDENTS(CURRENT DATE)) CESINNER
     INNER JOIN STUDENT ON CESINNER.STUDENT_ID = STUDENT.STUDENT_ID
@@ -61,6 +70,7 @@ SELECT
   FIRSTNAME,
   FORM_RUN,
   CLASS,
+  hr_teacher,
   (CASE WHEN ALL_FAMILIES.SORT_ORDER = 1 THEN COUNTS.TOTAL ELSE NULL END) AS "TOTAL_FAMILIES"
 
 FROM ALL_FAMILIES
