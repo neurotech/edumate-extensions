@@ -61,6 +61,8 @@ WITH event_date_students AS
         'STUDENT#' AS STUDENT_NUMBER,
         'FIRSTNAME' AS FIRSTNAME,
         'SURNAME' AS SURNAME,
+        'GENDER' AS GENDER,
+        'HOUSE' AS HOUSE,
         'HOMEROOM' AS HOMEROOM,
         'YEAR_GROUP' AS "FORM",
         9999 AS "FORM_SORT_ORDER",
@@ -111,7 +113,9 @@ WITH event_date_students AS
         student.student_number,
         (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
         contact.surname,
-        view_student_class_enrolment.class AS HOMEROOM,
+        LEFT(gender.gender, 1) AS "GENDER",
+        REPLACE(REPLACE(view_student_class_enrolment.class, ' Home Room ', ''), RIGHT(REPLACE(view_student_class_enrolment.class, ' Home Room ', ''), 3), '') AS HOUSE,
+        RIGHT(view_student_class_enrolment.class, 3) AS HOMEROOM,
         ('Year ' || (SELECT short_name FROM TABLE(edumate.get_student_active_form_run((reportable_students.student_id), (current date))) FETCH FIRST 1 ROW ONLY)) AS "FORM_RUN",
         (SELECT form_id FROM TABLE(edumate.get_student_active_form_run((reportable_students.student_id), (current date))) FETCH FIRST 1 ROW ONLY) AS "FORM_SORT_ORDER",
         ab1.status AS EV1,
@@ -125,6 +129,7 @@ WITH event_date_students AS
     FROM reportable_students
         INNER JOIN student ON student.student_id = reportable_students.student_id
         INNER JOIN contact ON contact.contact_id = student.contact_id
+        INNER JOIN gender ON gender.gender_id = contact.gender_id
         LEFT JOIN view_student_class_enrolment ON view_student_class_enrolment.student_id = student.student_id
             AND view_student_class_enrolment.class_type_id = 2
             AND current_date BETWEEN view_student_class_enrolment.start_date AND view_student_class_enrolment.end_date
@@ -159,7 +164,9 @@ SELECT
   student_number AS COL1,
   firstname AS COL2,
   surname AS COL3,
-  REPLACE(homeroom, '&#039;', '') AS COL4,
+  gender AS COL4,
+  REPLACE(house, '&#039;', '') AS COL5,
+  REPLACE(homeroom, '&#039;', '') AS COL6,
   form AS COL5,
   EV1, EV2, EV3, EV4, EV5, EV6, EV7,
   YTD
@@ -167,7 +174,7 @@ SELECT
 FROM final_report
 
 -- Home room sort
---ORDER BY sort_order, homeroom, surname, firstname
+ORDER BY sort_order, house, homeroom, surname, firstname
 
 -- Form sort
-ORDER BY sort_order, form_sort_order, homeroom, surname, firstname
+--ORDER BY sort_order, form_sort_order, homeroom, surname, firstname
