@@ -8,14 +8,33 @@ WITH current_staff AS (
     (effective_end IS NULL
     OR
     effective_end > (current date))
+),
+
+current_term AS (
+  SELECT term_id FROM term WHERE timetable_id = (
+    SELECT timetable_id FROM timetable
+    WHERE
+      academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(current date))
+      AND
+      default_flag = 1
+   )
+   AND (current date) BETWEEN start_date AND end_date
 )
 
 SELECT
-  current_staff.contact_id,
+  staff.staff_number,
+  contact.email_address,
   (CASE WHEN teacher_status.groups_id = 2 THEN 1 ELSE 0 END) AS "TEACHER",
-  (CASE WHEN support_status.groups_id = 602 THEN 1 ELSE 0 END) AS "SUPPORT"
+  (CASE WHEN support_status.groups_id = 602 THEN 1 ELSE 0 END) AS "SUPPORT",
+  staff_location.period,
+  staff_location.location,
+  (SELECT location FROM TABLE(EDUMATE.get_staff_next_location(staff.staff_id, (SELECT term_id FROM current_term), (current date)))) AS "NEXT_LOCATION"
 
 FROM current_staff
+
+INNER JOIN staff ON staff.contact_id = current_staff.contact_id
+INNER JOIN contact ON contact.contact_id = current_staff.contact_id
+LEFT JOIN TABLE(EDUMATE.get_staff_location(staff.staff_id, (current date))) staff_location ON staff_location.staff_id = staff.staff_id
 
 -- The group with the ID of 2 is 'Current Teachers'
 -- The group with the ID of 602 is 'Current Support Staff'
