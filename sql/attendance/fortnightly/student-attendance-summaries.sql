@@ -8,6 +8,11 @@ WITH REPORT_VARS AS (
   FROM SYSIBM.SYSDUMMY1
 ),
 
+report_scope AS (
+  SELECT '[[Scope=query_list(SELECT scope FROM db2inst1.view_report_scope ORDER BY sort_order ASC)]]' AS "SCOPE"
+  FROM SYSIBM.sysdummy1
+),
+
 -- Grabs all relevant attendance data ranging from the start of the academic year to the Report To date variable.
 STUDENT_ATTENDANCE_DATA AS (
   SELECT DISTINCT
@@ -23,7 +28,7 @@ STUDENT_ATTENDANCE_DATA AS (
   FROM DAILY_ATTENDANCE DA
   
   INNER JOIN VIEW_STUDENT_CLASS_ENROLMENT VSCE ON VSCE.STUDENT_ID = DA.STUDENT_ID
-  INNER JOIN CLASS ON CLASS.CLASS_ID = VSCE.CLASS_ID AND CLASS.CLASS_TYPE_ID = 2 AND VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY') AND VSCE.END_DATE > (CURRENT_DATE)
+  INNER JOIN CLASS ON CLASS.CLASS_ID = VSCE.CLASS_ID AND CLASS.CLASS_TYPE_ID = 2 AND VSCE.ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY') AND VSCE.END_DATE > (CURRENT DATE)
   CROSS JOIN REPORT_VARS
   
   WHERE
@@ -66,51 +71,79 @@ ABSENCES_LATES_COUNTS AS (
   FROM STUDENT_ATTENDANCE_DATA SAD
   
   GROUP BY SAD.CLASS, SAD.STUDENT_ID
+),
+
+final_report AS (
+  SELECT
+    (CASE WHEN alc.class LIKE '%Connor%' THEN ('OConnor ' || RIGHT(alc.class, 13)) ELSE alc.class END) AS "GROUPING",
+    (SELECT scope FROM report_scope) AS "SCOPE",
+    -- FN is used in the footer of the template
+    ALC.DIFF AS "FN",
+    STUDENT.STUDENT_NUMBER AS "LOOKUP_CODE",
+    (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
+    CONTACT.SURNAME AS "SURNAME",
+    (CASE
+      WHEN form.short_name IN (7,8,9) THEN 'Middle School'
+      WHEN form.short_name IN (10,11,12) THEN 'Senior School'
+      ELSE null
+    END) AS "SCHOOL",
+    form.short_name AS "YEAR_GROUP",
+    (CASE WHEN house.house LIKE '%Connor' THEN 'OConnor' ELSE house.house END) AS "HOUSE",
+    RIGHT(ALC.CLASS, 3) AS "HOMEROOM",
+    ALC.FORTNIGHT_ABSENCES AS "FN_ABSENCES",
+    ALC.FORTNIGHT_LATES AS "FN_LATES",
+    ALC.EXPLAINED_ABSENCES AS "EXP_ABSENCES_YTD",
+    ALC.UNEXPLAINED_ABSENCES AS "UNEXP_ABSENCES_YTD",
+    ALC.ABSENCES_YTD AS "ABSENCES_YTD",
+    -- Cumulative Absences and Lates are (Absences for the year to date / Number of termly fortnights passed for the year to date)
+    CAST((CAST(ALC.ABSENCES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "CUMUL_ABSENCES_AVERAGE",
+    ALC.EXPLAINED_LATES AS "EXP_LATES_YTD",
+    ALC.UNEXPLAINED_LATES AS "UNEXP_LATES_YTD",
+    ALC.LATES_YTD AS "LATES_YTD",
+    CAST((CAST(ALC.LATES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "CUMUL_LATES_AVERAGE",
+    TO_CHAR((SELECT REPORT_FN_START FROM REPORT_VARS), 'Month DD YYYY') AS "REPORT_FN_START",
+    TO_CHAR((SELECT REPORT_END FROM REPORT_VARS), 'Month DD YYYY') AS "REPORT_END"
+  
+  FROM TABLE(EDUMATE.GET_CURRENTLY_ENROLED_STUDENTS(current date)) GCES
+  
+  INNER JOIN STUDENT ON STUDENT.STUDENT_ID = GCES.STUDENT_ID
+  INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
+  INNER JOIN house ON house.house_id = student.house_id
+  
+  -- Only join the lowest form run. This fixes students who are in two forms appearing in two forms.
+  INNER JOIN FORM_RUN ON FORM_RUN.FORM_RUN_ID = (
+      SELECT FORM_RUN.FORM_RUN_ID
+      FROM TABLE(EDUMATE.GET_ENROLED_STUDENTS_FORM_RUN(CURRENT DATE)) GRSFR
+      INNER JOIN FORM_RUN ON GRSFR.FORM_RUN_ID = FORM_RUN.FORM_RUN_ID
+      WHERE GRSFR.STUDENT_ID = GCES.STUDENT_ID
+      FETCH FIRST 1 ROW ONLY
+  )
+  INNER JOIN form ON form.form_id = form_run.form_id
+  
+  LEFT JOIN ABSENCES_LATES_COUNTS ALC ON ALC.STUDENT_ID = GCES.STUDENT_ID
 )
 
-SELECT
-  -- FN is used in the footer of the template
-  (CASE WHEN ROW_NUMBER() OVER (PARTITION BY ALC.CLASS) = 1 THEN ALC.DIFF ELSE NULL END) AS "FN",
-  STUDENT.STUDENT_NUMBER AS "Lookup Code",
-  (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "First Name",
-  CONTACT.SURNAME AS "Surname",
-  FORM_RUN.FORM_RUN,
-  ALC.CLASS AS "Homeroom",
-  ALC.FORTNIGHT_ABSENCES AS "Fortnight Absences",
-  ALC.FORTNIGHT_LATES AS "Fortnight Lates",
-  ALC.EXPLAINED_ABSENCES AS "Explained Absences YTD",
-  ALC.UNEXPLAINED_ABSENCES AS "Unexplained Absences YTD",
-  ALC.ABSENCES_YTD AS "Absences YTD",
-  ALC.DIFF,
-  -- Cumulative Absences and Lates are (Absences for the year to date / Number of termly fortnights passed for the year to date)
-  CAST((CAST(ALC.ABSENCES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "Cumulative Absences (Average)",
-  ALC.EXPLAINED_LATES AS "Explained Lates YTD",
-  ALC.UNEXPLAINED_LATES AS "Unexplained Lates YTD",
-  ALC.LATES_YTD AS "Lates YTD",
-  CAST((CAST(ALC.LATES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "Cumulative Lates (Average)",
-  TO_CHAR((SELECT REPORT_FN_START FROM REPORT_VARS), 'Month DD YYYY') AS "REPORT_FN_START",
-  TO_CHAR((SELECT REPORT_END FROM REPORT_VARS), 'Month DD YYYY') AS "REPORT_END"
+--SELECT * FROM REPORT_VARS
 
+SELECT * FROM final_report
 
-FROM TABLE(EDUMATE.GET_CURRENTLY_ENROLED_STUDENTS(current date)) GCES
+WHERE SCHOOL LIKE (CASE
+  WHEN (SELECT scope FROM report_scope) IN ('All students', 'Brady','Cassidy','Caulfield','Delaney','Dwyer','McLaughlin','Vaughan','OConnor') THEN '%'
+  WHEN (SELECT scope FROM report_scope) = 'Middle School' THEN 'Middle%'
+  WHEN (SELECT scope FROM report_scope) = 'Senior School' THEN 'Senior%'
+  ELSE '%'
+END)
+AND
+HOUSE LIKE (CASE
+  WHEN (SELECT scope FROM report_scope) IN ('All students', 'Middle School', 'Senior School') THEN '%'
+  WHEN (SELECT scope FROM report_scope) = 'Brady' THEN 'Brady'
+  WHEN (SELECT scope FROM report_scope) = 'Cassidy' THEN 'Cassidy'
+  WHEN (SELECT scope FROM report_scope) = 'Caulfield' THEN 'Caulfield'
+  WHEN (SELECT scope FROM report_scope) = 'Delaney' THEN 'Delaney'
+  WHEN (SELECT scope FROM report_scope) = 'Dwyer' THEN 'Dwyer'
+  WHEN (SELECT scope FROM report_scope) = 'McLaughlin' THEN 'McLaughlin'
+  WHEN (SELECT scope FROM report_scope) = 'Vaughan' THEN 'Vaughan'
+  WHEN (SELECT scope FROM report_scope) = 'OConnor' THEN 'OConnor'
+END)
 
-INNER JOIN STUDENT ON STUDENT.STUDENT_ID = GCES.STUDENT_ID
-INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
-
--- Only join the lowest form run. This fixes students who are in two forms appearing in two forms.
-INNER JOIN FORM_RUN ON FORM_RUN.FORM_RUN_ID = (
-    SELECT FORM_RUN.FORM_RUN_ID
-    FROM TABLE(EDUMATE.GET_ENROLED_STUDENTS_FORM_RUN(CURRENT DATE)) GRSFR
-    INNER JOIN FORM_RUN ON GRSFR.FORM_RUN_ID = FORM_RUN.FORM_RUN_ID
-    WHERE GRSFR.STUDENT_ID = GCES.STUDENT_ID
-    FETCH FIRST 1 ROW ONLY
-)
-
-LEFT JOIN ABSENCES_LATES_COUNTS ALC ON ALC.STUDENT_ID = GCES.STUDENT_ID
-
-WHERE
-  FORM_RUN.FORM_RUN LIKE '[[Form=query_list(SELECT FORM_RUN FROM FORM_RUN WHERE FORM_RUN LIKE TO_CHAR((CURRENT DATE), 'YYYY') ||  ' Year %%')]]'
-  AND
-  ALC.CLASS LIKE '[[Homeroom=query_list(WITH CLASSES AS (SELECT CLASS.CLASS, CLASS.COURSE_ID FROM CLASS WHERE CLASS.CLASS_TYPE_ID = 2 AND CLASS.ACADEMIC_YEAR_ID = (SELECT ACADEMIC_YEAR_ID FROM ACADEMIC_YEAR WHERE ACADEMIC_YEAR = TO_CHAR((CURRENT DATE), 'YYYY')) ORDER BY CLASS.COURSE_ID), WILDCARD AS (SELECT '%' AS CLASS, NULL AS "COURSE_ID" FROM SYSIBM.SYSDUMMY1) SELECT * FROM WILDCARD UNION SELECT * FROM CLASSES ORDER BY COURSE_ID)]]'
-
-ORDER BY ALC.CLASS, ALC.ABSENCES_YTD DESC, CONTACT.SURNAME
+ORDER BY house ASC, homeroom ASC, absences_ytd DESC, surname ASC, firstname ASC
