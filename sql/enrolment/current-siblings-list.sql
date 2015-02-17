@@ -66,4 +66,4 @@ WITH
     GROUP BY contact.contact_id, contact.surname, contact.firstname, form.form, student_tutor.class
     )
 
-SELECT * FROM raw_report WHERE surname = 'Derkatch' ORDER BY form, surname, firstname
+SELECT * FROM raw_report ORDER BY form, surname, firstname
