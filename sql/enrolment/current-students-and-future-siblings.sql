@@ -8,6 +8,21 @@ WITH report_vars AS (
   FROM SYSIBM.sysdummy1
 ),
 
+report_diff AS (
+  SELECT
+    (LEFT((SELECT report_form FROM report_vars), 4) - YEAR(current date)) AS "DIFF"
+  FROM SYSIBM.sysdummy1
+),
+
+report_group AS (
+  SELECT
+    (7 - (SELECT diff FROM report_diff)) AS "CURRENT_YEAR_GROUP",
+    (13 - ((SELECT diff FROM report_diff) * 2)) AS "CURRENT_AGE_RANGE_LOW",
+    (14 - ((SELECT diff FROM report_diff) * 2)) AS "CURRENT_AGE_RANGE_HIGH"
+
+  FROM SYSIBM.sysdummy1
+),
+
 student_siblings AS
 (
   SELECT DISTINCT
@@ -15,9 +30,10 @@ student_siblings AS
     get_enroled_students_form_run.form_run_id,
     s3.student_id AS "SIBLING_STUDENT_ID",
     student_status.student_status AS "SIBLING_STATUS",
-    (CASE WHEN gass.exp_form_run IS null THEN TO_CHAR((c3.birthdate), 'YYYY-DD-Mon') ELSE gass.exp_form_run END) AS "SIBLING_FORM_RUN",
-    (CASE WHEN gass.exp_form_run IS null THEN CHAR(DECIMAL((SUBSTR(DIGITS(c3.birthdate - (current date)),3,2)))) ELSE '-' END) AS "SIBLING_AGE",
-    TO_CHAR((gass.date_application), 'DD Mon YYYY') AS "SIBLING_DATE_APPLICATION"
+    TO_CHAR(c3.birthdate, 'DD/MM/YYYY') AS "SIBLING_DOB",
+    (DECIMAL((SUBSTR(DIGITS(c3.birthdate - (current date)),3,2)))) AS "SIBLING_AGE",
+    gass.exp_form_run AS "SIBLING_FORM_RUN",
+    TO_CHAR(gass.date_application, 'DD/MM/YYYY') AS "SIBLING_DATE_APPLICATION"
     
   FROM table(edumate.get_enroled_students_form_run((SELECT report_date FROM report_vars)))
 
@@ -48,8 +64,9 @@ raw_report AS (
     (CASE WHEN sibling_contact.preferred_name IS null THEN sibling_contact.firstname ELSE sibling_contact.preferred_name END) AS "SIBLING_FIRSTNAME",
     sibling_contact.surname AS "SIBLING_SURNAME",
     student_siblings.sibling_status,
-    student_siblings.sibling_form_run,
+    student_siblings.sibling_dob,
     student_siblings.sibling_age,
+    student_siblings.sibling_form_run,
     student_siblings.sibling_date_application
 
   FROM student_siblings
@@ -63,10 +80,16 @@ raw_report AS (
   INNER JOIN form_run ON form_run.form_run_id = student_siblings.form_run_id
   INNER JOIN form ON form.form_id = form_run.form_id
   
-  WHERE sibling_form_run LIKE (SELECT report_form FROM report_vars) OR sibling_form_run LIKE '%-%-%'
+  WHERE
+    sibling_form_run LIKE (SELECT report_form FROM report_vars)
+    OR
+    sibling_form_run IS null
+    AND
+    (student_siblings.sibling_age BETWEEN (SELECT current_age_range_low FROM report_group) AND (SELECT current_age_range_high FROM report_group))
 )
 
 SELECT
+  ('Current Students with Future Siblings for Current Year ' || (SELECT current_year_group FROM report_group) || ' (' || (SELECT current_age_range_low FROM report_group) || '-' || (SELECT current_age_range_high FROM report_group) || ' years of age)') AS "REPORT_HEADER",
   (CASE WHEN sort_order = 1 THEN student_firstname ELSE null END) AS "STUDENT_FIRSTNAME",
   (CASE WHEN sort_order = 1 THEN student_surname ELSE null END) AS "STUDENT_SURNAME",
   (CASE WHEN sort_order = 1 THEN year_group ELSE null END) AS "STUDENT_YEAR_GROUP",
@@ -74,10 +97,11 @@ SELECT
   sibling_firstname,
   sibling_surname,
   sibling_status,
-  sibling_form_run AS "SIBLING_YEAR_GROUP",
+  sibling_dob,
   sibling_age,
+  sibling_form_run AS "SIBLING_YEAR_GROUP",
   sibling_date_application
 
 FROM raw_report
 
-ORDER BY raw_report.student_surname, raw_report.student_firstname, raw_report.sort_order
+ORDER BY sibling_status DESC, raw_report.student_surname, raw_report.student_firstname, raw_report.sort_order
