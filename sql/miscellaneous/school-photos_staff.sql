@@ -1,35 +1,24 @@
 -- Firstname, Surname, Salutation, Staff Number
 
 SELECT
-  STAFF.STAFF_NUMBER,
-  SALUTATION.SALUTATION,
+  staff.staff_number,
+  salutation.salutation,
   (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
-  CONTACT.SURNAME
+  contact.surname
 
-FROM STAFF
+FROM group_membership gm
 
-INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STAFF.CONTACT_ID
-INNER JOIN SALUTATION ON SALUTATION.SALUTATION_ID = CONTACT.SALUTATION_ID
-INNER JOIN GROUP_MEMBERSHIP ON GROUP_MEMBERSHIP.CONTACT_ID = STAFF.CONTACT_ID
-INNER JOIN GROUPS ON GROUPS.GROUPS_ID = GROUP_MEMBERSHIP.GROUPS_ID AND GROUPS.GROUPS_ID = 3
-LEFT JOIN STAFF_EMPLOYMENT SE ON STAFF.STAFF_ID = SE.STAFF_ID
+INNER JOIN staff ON staff.contact_id = gm.contact_id
+INNER JOIN contact ON contact.contact_id = gm.contact_id
+INNER JOIN salutation ON salutation.salutation_id = contact.salutation_id
 
 WHERE
-  GROUPS.GROUPS_ID = 3
-    AND
-  CONTACT.SURNAME NOT LIKE 'Coach'
-    AND
-  SE.EMPLOYMENT_TYPE_ID IN (1,2,4)
-    AND
-  STAFF.STAFF_ID NOT IN (1, 1057, 1976)
-    AND
-  --Remove 'non staff' staff
-  STAFF.STAFF_NUMBER NOT IN (10144, 25463, 8982, 11016, 10258, 10257, 23795, 25088, 8903, 26437, 26440, 26438, 26439)
-    AND
-  SE.START_DATE <= current_date
-    AND
-  (SE.END_DATE IS NULL
-    OR
-  SE.END_DATE > current_date)
-  
-ORDER BY contact.surname, contact.preferred_name, contact.firstname
+  groups_id = 386
+  AND
+  gm.effective_start <= (current date)
+  AND
+  (gm.effective_end IS null
+  OR
+  gm.effective_end > (current date))
+
+ORDER BY UPPER(contact.surname), contact.preferred_name, contact.firstname
