@@ -24,11 +24,8 @@ current_term AS (
 SELECT
   staff.staff_number,
   contact.email_address,
-  (CASE WHEN teacher_status.groups_id = 2 THEN 1 ELSE 0 END) AS "TEACHER",
-  (CASE WHEN support_status.groups_id = 602 THEN 1 ELSE 0 END) AS "SUPPORT",
-  staff_location.period,
-  staff_location.location,
-  (SELECT location FROM TABLE(EDUMATE.get_staff_next_location(staff.staff_id, (SELECT term_id FROM current_term), (current date)))) AS "NEXT_LOCATION"
+  (CASE WHEN teacher_status.groups_id = 2 THEN 'true' ELSE 'false' END) AS "TEACHER",
+  (CASE WHEN support_status.groups_id = 602 THEN 'true' ELSE 'false' END) AS "SUPPORT"
 
 FROM current_staff
 
