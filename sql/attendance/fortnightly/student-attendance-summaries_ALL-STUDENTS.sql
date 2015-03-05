@@ -8,11 +8,6 @@ WITH REPORT_VARS AS (
   FROM SYSIBM.SYSDUMMY1
 ),
 
-report_scope AS (
-  SELECT '[[Scope=query_list(SELECT scope FROM db2inst1.view_report_scope ORDER BY sort_order ASC)]]' AS "SCOPE"
-  FROM SYSIBM.sysdummy1
-),
-
 -- Grabs all relevant attendance data ranging from the start of the academic year to the Report To date variable.
 STUDENT_ATTENDANCE_DATA AS (
   SELECT DISTINCT
@@ -76,7 +71,6 @@ ABSENCES_LATES_COUNTS AS (
 final_report AS (
   SELECT
     (CASE WHEN alc.class LIKE '%Connor%' THEN ('OConnor ' || RIGHT(alc.class, 13)) ELSE alc.class END) AS "GROUPING",
-    (SELECT scope FROM report_scope) AS "SCOPE",
     -- FN is used in the footer of the template
     ALC.DIFF AS "FN",
     STUDENT.STUDENT_NUMBER AS "LOOKUP_CODE",
@@ -123,27 +117,6 @@ final_report AS (
   LEFT JOIN ABSENCES_LATES_COUNTS ALC ON ALC.STUDENT_ID = GCES.STUDENT_ID
 )
 
---SELECT * FROM REPORT_VARS
-
 SELECT * FROM final_report
 
-WHERE SCHOOL LIKE (CASE
-  WHEN (SELECT scope FROM report_scope) IN ('All students', 'Brady','Cassidy','Caulfield','Delaney','Dwyer','McLaughlin','Vaughan','OConnor') THEN '%'
-  WHEN (SELECT scope FROM report_scope) = 'Middle School' THEN 'Middle%'
-  WHEN (SELECT scope FROM report_scope) = 'Senior School' THEN 'Senior%'
-  ELSE '%'
-END)
-AND
-HOUSE LIKE (CASE
-  WHEN (SELECT scope FROM report_scope) IN ('All students', 'Middle School', 'Senior School') THEN '%'
-  WHEN (SELECT scope FROM report_scope) = 'Brady' THEN 'Brady'
-  WHEN (SELECT scope FROM report_scope) = 'Cassidy' THEN 'Cassidy'
-  WHEN (SELECT scope FROM report_scope) = 'Caulfield' THEN 'Caulfield'
-  WHEN (SELECT scope FROM report_scope) = 'Delaney' THEN 'Delaney'
-  WHEN (SELECT scope FROM report_scope) = 'Dwyer' THEN 'Dwyer'
-  WHEN (SELECT scope FROM report_scope) = 'McLaughlin' THEN 'McLaughlin'
-  WHEN (SELECT scope FROM report_scope) = 'Vaughan' THEN 'Vaughan'
-  WHEN (SELECT scope FROM report_scope) = 'OConnor' THEN 'OConnor'
-END)
-
-ORDER BY house ASC, homeroom ASC, absences_ytd DESC, surname ASC, firstname ASC
+ORDER BY grouping ASC, homeroom ASC, absences_ytd DESC, surname ASC, firstname ASC
