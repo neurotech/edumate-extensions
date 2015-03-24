@@ -30,13 +30,13 @@ timetabled_dates AS (
 
 student_homeroom AS (
   SELECT
-    student_id,
-    class AS HOMEROOM,
-    ROW_NUMBER() OVER (PARTITION BY student_id ORDER BY end_date DESC, start_date DESC) AS ROW_NUM
+    vsce.student_id,
+    vsce.class AS HOMEROOM,
+    ROW_NUMBER() OVER (PARTITION BY vsce.student_id ORDER BY vsce.end_date DESC, vsce.start_date DESC) AS ROW_NUM
   
-  FROM view_student_class_enrolment
+  FROM view_student_class_enrolment vsce
   
-  WHERE class_type_id = 2 AND current_date BETWEEN start_date AND end_date
+  WHERE vsce.class_type_id = 2 AND current_date BETWEEN vsce.start_date AND vsce.end_date
 ),
 
 student_form AS (
@@ -246,11 +246,11 @@ overall_class_averages AS (
 
 class_students AS (
   SELECT
-    class.class||' '||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname AS LABEL,
+    class.class||' ('||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname || ')' AS LABEL,
     c2.surname||', '||c2.firstname AS TEACHER_ORDER,
     ROW_NUMBER() OVER (PARTITION BY student_class_stats.class_id ORDER BY contact.surname, contact.firstname) AS SORT_ORDER,
     UPPER(contact.surname)||', '||COALESCE(contact.preferred_name,contact.firstname) AS STUDENT_NAME,
-    student_homeroom.homeroom,
+    (CASE WHEN student_homeroom.homeroom IS null THEN ('*** Left: ' || TO_CHAR(gass.end_date, 'DD Mon, YYYY')) ELSE student_homeroom.homeroom END) AS "HOMEROOM",
     TO_CHAR(periods,'9990.0') AS PERIODS,
     TO_CHAR(to_attend,'9990.0') AS TO_ATTEND,
 
@@ -276,41 +276,16 @@ class_students AS (
   INNER JOIN student ON student.student_id = student_class_stats.student_id
   INNER JOIN contact ON contact.contact_id = student.contact_id
   LEFT JOIN student_homeroom ON student_homeroom.student_id = student.student_id AND student_homeroom.row_num = 1
+  LEFT JOIN TABLE(EDUMATE.getallstudentstatus(current date)) gass ON gass.student_id = student_class_stats.student_id
 ),
-
-/* class_totals AS (
-  SELECT
-    class.class||' '||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname AS LABEL,
-    c2.surname||', '||c2.firstname AS TEACHER_ORDER,
-    10000 AS SORT_ORDER,
-    'All students' AS STUDENT_NAME,
-    null AS HOMEROOM,
-    TO_CHAR(periods,'990.9') AS PERIODS,
-    TO_CHAR(to_attend,'990.9') AS TO_ATTEND,
-    TO_CHAR(absent,'990.9') AS ABSENT,
-    TO_CHAR(on_event,'990.9') AS ON_EVENT,
-    TO_CHAR(appointment,'990.9') AS APPOINTMENT,
-    TO_CHAR(staff_event,'990.9') AS STAFF_EVENT,
-    TO_CHAR(staff_away,'990.9') AS STAFF_AWAY,
-    TO_CHAR(staff_personal,'990.9') AS STAFF_PERSONAL,
-    TO_CHAR(to_attend-absent,'990.9') AS ATTENDED
-
-  FROM overall_class_stats
-
-  INNER JOIN class ON class.class_id = overall_class_stats.class_id
-  INNER JOIN class_teacher ON class_teacher.class_id = class.class_id
-  INNER JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
-  INNER JOIN contact c2 ON c2.contact_id = teacher.contact_id
-  INNER JOIN salutation s2 ON s2.salutation_id = c2.salutation_id
-), */
 
 class_averages AS (
   SELECT
-    class.class||' '||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname AS LABEL,
+    class.class||' ('||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname || ')' AS LABEL,
     c2.surname||', '||c2.firstname AS TEACHER_ORDER,
     10000 AS SORT_ORDER,
-    'All students' AS STUDENT_NAME,
-    null AS HOMEROOM,
+    '** All students' AS STUDENT_NAME,
+    '-- Averages:' AS HOMEROOM,
     TO_CHAR(periods,'990.9') AS PERIODS,
     TO_CHAR(to_attend,'990.9') AS TO_ATTEND,
 
@@ -338,16 +313,12 @@ class_averages AS (
 final_report AS (
   SELECT * FROM class_students
   UNION
-  --SELECT * FROM class_totals
   SELECT * FROM class_averages
 )
 
---SELECT * FROM student_class_stats
-
 SELECT
-  --label||REPLACE(REPLACE(REPLACE(' ('||TO_CHAR((SELECT report_start FROM report_vars),' DD Mon')||' - '||TO_CHAR((SELECT report_end FROM report_vars),' DD Mon')||')',' 0',' '),'  ',' '),'( ','(') AS LABEL,
   label,
-  TO_CHAR((SELECT report_start FROM report_vars),'DD Month') || ' to ' || TO_CHAR((SELECT report_end FROM report_vars),'DD Month YYYY') AS "REPORT_SCOPE",
+  TO_CHAR((SELECT report_start FROM report_vars),'DD Mon') || ' to ' || TO_CHAR((SELECT report_end FROM report_vars),'DD Mon YYYY') AS "REPORT_SCOPE",
   student_name,
   homeroom,
   periods,
