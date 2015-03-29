@@ -35,5 +35,5 @@ LEFT JOIN TABLE(EDUMATE.get_staff_location(staff.staff_id, (current date))) staf
 
 -- The group with the ID of 2 is 'Current Teachers'
 -- The group with the ID of 602 is 'Current Support Staff'
-LEFT JOIN group_membership teacher_status ON teacher_status.contact_id = current_staff.contact_id AND teacher_status.groups_id = 2
-LEFT JOIN group_membership support_status ON support_status.contact_id = current_staff.contact_id AND support_status.groups_id = 602
+LEFT JOIN group_membership teacher_status ON teacher_status.contact_id = current_staff.contact_id AND teacher_status.groups_id = 2 AND (teacher_status.effective_end IS NULL OR teacher_status.effective_end > (current date))
+LEFT JOIN group_membership support_status ON support_status.contact_id = current_staff.contact_id AND support_status.groups_id = 602 AND (support_status.effective_end IS NULL OR support_status.effective_end > (current date))
