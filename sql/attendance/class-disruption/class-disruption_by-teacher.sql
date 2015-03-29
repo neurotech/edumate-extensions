@@ -19,25 +19,73 @@ timetabled_dates AS (
     timetable.timetable_id,
     edumate.getdayindex(term.start_date,term.cycle_start_day,cycle.days_in_cycle, date_range.date_on) AS DAY_INDEX,
     cycle.cycle_id
+  
   FROM date_range
+  
   INNER JOIN term ON date_range.date_on BETWEEN term.start_date AND term.end_date
   INNER JOIN term_group ON term_group.term_id = term.term_id
   INNER JOIN cycle ON cycle.cycle_id = term_group.cycle_id
   INNER JOIN timetable ON timetable.timetable_id = term.timetable_id
 ),
 
-timetabled_dates AS (
-  SELECT
-    date_range.date_on,
-    timetable.timetable_id,
-    edumate.getdayindex(term.start_date,term.cycle_start_day,cycle.days_in_cycle, date_range.date_on) AS DAY_INDEX,
-    cycle.cycle_id
-  FROM date_range
-  INNER JOIN term ON date_range.date_on BETWEEN term.start_date AND term.end_date
-  INNER JOIN term_group ON term_group.term_id = term.term_id
-  INNER JOIN cycle ON cycle.cycle_id = term_group.cycle_id
-  INNER JOIN timetable ON timetable.timetable_id = term.timetable_id
-),
+    student_homeroom AS
+    (
+    SELECT
+        student_id,
+        class AS HOMEROOM,
+        ROW_NUMBER() OVER (PARTITION BY student_id ORDER BY end_date DESC, start_date DESC) AS ROW_NUM
+    FROM view_student_class_enrolment
+    WHERE class_type_id = 2
+        AND current_date BETWEEN start_date AND end_date
+    ),
+
+    student_form AS
+    (
+    SELECT
+        student_form_run.student_id,
+        form.short_name AS FORM,
+        form_run.form_run AS FORM_RUN,
+        ROW_NUMBER() OVER (PARTITION BY student_form_run.student_id ORDER BY student_form_run.end_date DESC) AS ROW_NUM
+    FROM student_form_run 
+        INNER JOIN form_run ON form_run.form_run_id = student_form_run.form_run_id
+        INNER JOIN form ON form.form_id = form_run.form_id
+    WHERE current_date BETWEEN student_form_run.start_date AND student_form_run.end_date
+    ),
+
+    students_on_event AS
+    (
+    SELECT DISTINCT
+        event_student.student_id,
+        event.start_date,
+        event.end_date
+    FROM event
+        INNER JOIN event_student ON event_student.event_id = event.event_id
+    WHERE DATE(event.start_date) <= (SELECT report_end FROM report_vars) AND DATE(event.end_date) >= (SELECT report_start FROM report_vars)
+        AND (event.permission_flag is null OR event.permission_flag = 0 OR event_student.permission_flag = 1)
+    ),
+
+    student_appointments AS
+    (
+    SELECT DISTINCT
+        student.student_id,
+        activity.start_date,
+        activity.end_date
+    FROM activity
+        INNER JOIN activity_contact ON activity_contact.activity_id = activity.activity_id
+        INNER JOIN student ON student.contact_id = activity_contact.contact_id
+    WHERE DATE(activity.start_date) <= (SELECT report_end FROM report_vars) AND DATE(activity.end_date) >= (SELECT report_start FROM report_vars)
+    ),
+        
+    staff_on_event AS
+    (
+    SELECT
+        event_staff.staff_id,
+        event.start_date,
+        event.end_date
+    FROM event
+        INNER JOIN event_staff ON event_staff.event_id = event.event_id
+    WHERE DATE(event.start_date) <= (SELECT report_end FROM report_vars) AND DATE(event.end_date) >= (SELECT report_start FROM report_vars)
+    ),
 
     raw_data AS
     (
