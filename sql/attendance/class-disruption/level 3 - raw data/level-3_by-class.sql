@@ -1,7 +1,10 @@
 WITH report_vars AS (
   SELECT
-    (SELECT start_date FROM term WHERE term = 'Term 1' AND YEAR(start_date) = YEAR(current date) FETCH FIRST 1 ROW ONLY) AS "REPORT_START",
-    (current date) AS "REPORT_END"
+    --(SELECT start_date FROM term WHERE term = 'Term 1' AND YEAR(start_date) = YEAR(current date) FETCH FIRST 1 ROW ONLY) AS "REPORT_START",
+    (current date - 11 DAYS) AS "REPORT_START",
+    (current date) AS "REPORT_END",
+    --'[[Class=query_list(SELECT DISTINCT class FROM view_student_class_enrolment WHERE academic_year = YEAR(current date) AND class_type_id IN (1,9,10,1101,1124,1148) ORDER BY class)]]' AS "REPORT_CLASS"
+    '10 English 00R' AS "REPORT_CLASS"
 
   FROM SYSIBM.sysdummy1
 ),
@@ -19,9 +22,9 @@ timetabled_dates AS (
     timetable.timetable_id,
     edumate.getdayindex(term.start_date,term.cycle_start_day,cycle.days_in_cycle, date_range.date_on) AS DAY_INDEX,
     cycle.cycle_id
-  
+
   FROM date_range
-  
+
   INNER JOIN term ON date_range.date_on BETWEEN term.start_date AND term.end_date
   INNER JOIN term_group ON term_group.term_id = term.term_id
   INNER JOIN cycle ON cycle.cycle_id = term_group.cycle_id
@@ -33,24 +36,10 @@ student_homeroom AS (
     vsce.student_id,
     vsce.class AS HOMEROOM,
     ROW_NUMBER() OVER (PARTITION BY vsce.student_id ORDER BY vsce.end_date DESC, vsce.start_date DESC) AS ROW_NUM
-  
-  FROM view_student_class_enrolment vsce
-  
-  WHERE vsce.class_type_id = 2 AND current_date BETWEEN vsce.start_date AND vsce.end_date
-),
 
-student_form AS (
-  SELECT
-    student_form_run.student_id,
-    form.short_name AS FORM,
-    form_run.form_run AS FORM_RUN,
-    ROW_NUMBER() OVER (PARTITION BY student_form_run.student_id ORDER BY student_form_run.end_date DESC) AS ROW_NUM
-  FROM student_form_run 
-  
-  INNER JOIN form_run ON form_run.form_run_id = student_form_run.form_run_id
-  INNER JOIN form ON form.form_id = form_run.form_id
-  
-  WHERE current_date BETWEEN student_form_run.start_date AND student_form_run.end_date
+  FROM view_student_class_enrolment vsce
+
+  WHERE vsce.class_type_id = 2 AND current_date BETWEEN vsce.start_date AND vsce.end_date
 ),
 
 students_on_event AS (
@@ -81,23 +70,23 @@ student_appointments AS (
 
   INNER JOIN activity_contact ON activity_contact.activity_id = activity.activity_id
   INNER JOIN student ON student.contact_id = activity_contact.contact_id
-  
+
   WHERE
     DATE(activity.start_date) <= (SELECT report_end FROM report_vars)
     AND
     DATE(activity.end_date) >= (SELECT report_start FROM report_vars)
 ),
-      
+
 staff_on_event AS (
   SELECT
     event_staff.staff_id,
     event.start_date,
     event.end_date
-  
+
   FROM event
-  
+
   INNER JOIN event_staff ON event_staff.event_id = event.event_id
-  
+
   WHERE
     DATE(event.start_date) <= (SELECT report_end FROM report_vars)
     AND
@@ -105,7 +94,7 @@ staff_on_event AS (
 ),
 
 raw_data AS (
-  SELECT 
+  SELECT
     timetabled_dates.date_on,
     period.short_name AS PERIOD,
     class.class_id,
@@ -115,26 +104,42 @@ raw_data AS (
     view_student_class_enrolment.student_id,
     -- flag is student is in class
     1 AS PERIODS,
+
+    /* TO_ATTEND (Number of periods where a student is due to be in class with their teacher.)
+       For the given period on the given date:
+        - if the student is NOT on event
+        - the class has NOT been replaced
+       Then: count + 1
+    */
     CASE WHEN students_on_event.student_id is null AND perd_cls_replace.perd_cls_replace_id is null THEN 1 ELSE 0 END AS TO_ATTEND,
-    CASE WHEN students_on_event.student_id is null AND perd_cls_replace.perd_cls_replace_id is null 
+    
+    /* ABSENT (Number of periods where a student is due to be in class with their teacher and has been marked absent in.)
+       For the given period on the given date:
+        - if the student is NOT on event
+        - the class has NOT been replaced
+        - the student is NOT on an appointment
+        - the student has an attendance status of 'Absent'
+       Then: count + 1
+    */
+    CASE WHEN students_on_event.student_id is null AND perd_cls_replace.perd_cls_replace_id is null
         AND student_appointments.student_id is null AND attend_status.attend_status_id = 3 THEN 1 ELSE 0 END AS ABSENT,
     CASE WHEN students_on_event.student_id is not null THEN 1 ELSE 0 END AS ON_EVENT,
     CASE WHEN student_appointments.student_id is not null OR attend_status.attend_status_id IN (18,19,20) THEN 1 ELSE 0 END AS APPOINTMENT,
     CASE WHEN staff_on_event.staff_id is not null THEN 1 ELSE 0 END AS STAFF_EVENT,
-    CASE WHEN away_reason.away_reason_id IN (1,3,8,97,98,121,146,169) THEN 1 ELSE 0 END AS STAFF_PERSONAL,
-    CASE WHEN away_reason.away_reason_id is not null AND away_reason.away_reason_id NOT IN (1,3,8,97,98,121,146,169) THEN 1 ELSE 0 END AS STAFF_AWAY
-  
+    CASE WHEN away_reason.away_reason_id IN (1,3,8,10,75,97,98,121,146,169) THEN 1 ELSE 0 END AS STAFF_PERSONAL,
+    CASE WHEN away_reason.away_reason_id is not null AND away_reason.away_reason_id IN (5,6,9,25,49,73,74) THEN 1 ELSE 0 END AS STAFF_OTHER
+
   FROM timetabled_dates
 
   INNER JOIN cycle_day ON cycle_day.cycle_id = timetabled_dates.cycle_id AND cycle_day.day_index = timetabled_dates.day_index
   INNER JOIN period_cycle_day ON period_cycle_day.cycle_day_id = cycle_day.cycle_day_id
   INNER JOIN period ON period.period_id = period_cycle_day.period_id
   INNER JOIN period_class ON period_class.period_cycle_day_id = period_cycle_day.period_cycle_day_id
-    AND timetabled_dates.date_on BETWEEN period_class.effective_start AND period_class.effective_end 
+    AND timetabled_dates.date_on BETWEEN period_class.effective_start AND period_class.effective_end
     AND period_class.timetable_id = timetabled_dates.timetable_id
 
   INNER JOIN class ON class.class_id = period_class.class_id
-    AND class.class_type_id NOT IN (6,8,1000,1001,1002,1003)
+    AND class.class_type_id IN (1,9,10,1101,1124,1148)
   INNER JOIN perd_cls_teacher ON perd_cls_teacher.period_class_id = period_class.period_class_id
   INNER JOIN teacher ON teacher.teacher_id = perd_cls_teacher.teacher_id
   INNER JOIN staff ON staff.contact_id = teacher.contact_id
@@ -158,7 +163,7 @@ raw_data AS (
   -- class must have students
   INNER JOIN view_student_class_enrolment ON view_student_class_enrolment.class_id = period_class.class_id
     AND view_student_class_enrolment.start_date <= timetabled_dates.date_on
-    AND view_student_class_enrolment.end_date >= timetabled_dates.date_on   
+    AND view_student_class_enrolment.end_date >= timetabled_dates.date_on
   -- is student on event?
   LEFT JOIN students_on_event ON students_on_event.student_id = view_student_class_enrolment.student_id
     AND students_on_event.start_date <= TIMESTAMP(timetabled_dates.date_on,period.end_time)
@@ -173,27 +178,8 @@ raw_data AS (
   LEFT JOIN student_appointments ON student_appointments.student_id = view_student_class_enrolment.student_id
     AND student_appointments.start_date <= TIMESTAMP(timetabled_dates.date_on,period.end_time)
     AND student_appointments.end_date >= TIMESTAMP(timetabled_dates.date_on,period.start_time)
-),
 
-overall_class_stats AS (
-  SELECT
-    class_id,
-    --FLOAT(100) AS PERIODS,
-    FLOAT(SUM(periods))*100/COUNT(periods) AS PERIODS,
-    FLOAT(SUM(to_attend))*100/COUNT(to_attend) AS TO_ATTEND,
-    
-    FLOAT(SUM(absent))*100/COUNT(absent) AS ABSENT,
-    FLOAT(SUM(on_event))*100/COUNT(on_event) AS ON_EVENT,
-    FLOAT(SUM(appointment))*100/COUNT(appointment) AS APPOINTMENT,
-    
-    FLOAT(SUM(staff_event))*100/COUNT(staff_event) AS STAFF_EVENT,
-    FLOAT(SUM(staff_personal))*100/COUNT(staff_personal) AS STAFF_PERSONAL,
-    FLOAT(SUM(staff_away))*100/COUNT(staff_away) AS STAFF_AWAY,
-    FLOAT(SUM(to_attend-absent)) AS ATTENDED
-
-  FROM raw_data
-
-  GROUP BY class_id
+  WHERE class.class LIKE (SELECT report_class FROM report_vars)
 ),
 
 student_class_stats AS (
@@ -210,10 +196,11 @@ student_class_stats AS (
 
     FLOAT(SUM(staff_event)) AS STAFF_EVENT,
     FLOAT(SUM(staff_personal)) AS STAFF_PERSONAL,
-    FLOAT(SUM(staff_away)) AS STAFF_AWAY,
-    FLOAT(SUM(staff_event) + SUM(staff_personal) + SUM(staff_away)) AS STAFF_TOTAL,
+    FLOAT(SUM(staff_other)) AS STAFF_OTHER,
+    FLOAT(SUM(staff_event) + SUM(staff_personal) + SUM(staff_other)) AS STAFF_TOTAL,
 
-    FLOAT(SUM(to_attend-absent)) AS ATTENDED
+    FLOAT(SUM(to_attend-absent)) * 100 / FLOAT(SUM(to_attend)) AS ATTENDED
+
 
   FROM raw_data
 
@@ -234,19 +221,19 @@ overall_class_averages AS (
 
     AVG(staff_event) AS STAFF_EVENT,
     AVG(staff_personal) AS STAFF_PERSONAL,
-    AVG(staff_away) AS STAFF_AWAY,
+    AVG(staff_other) AS STAFF_OTHER,
     AVG(staff_total) AS STAFF_TOTAL,
-    
-    AVG(to_attend-absent) AS ATTENDED
-    
+
+    AVG(attended) AS ATTENDED
+
   FROM student_class_stats
-  
+
   GROUP BY class_id
 ),
 
 class_students AS (
   SELECT
-    class.class||' ('||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname || ')' AS LABEL,
+    class.class||'<br>('||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname || ')' AS LABEL,
     c2.surname||', '||c2.firstname AS TEACHER_ORDER,
     ROW_NUMBER() OVER (PARTITION BY student_class_stats.class_id ORDER BY contact.surname, contact.firstname) AS SORT_ORDER,
     UPPER(contact.surname)||', '||COALESCE(contact.preferred_name,contact.firstname) AS STUDENT_NAME,
@@ -258,16 +245,16 @@ class_students AS (
     TO_CHAR(on_event,'9990.0') AS ON_EVENT,
     TO_CHAR(appointment,'9990.0') AS APPOINTMENT,
     TO_CHAR(student_total, '9990.0') AS STUDENT_TOTAL,
-    
+
     TO_CHAR(staff_event,'9990.0') AS STAFF_EVENT,
     TO_CHAR(staff_personal,'9990.0') AS STAFF_PERSONAL,
-    TO_CHAR(staff_away,'9990.0') AS STAFF_AWAY,
+    TO_CHAR(staff_other,'9990.0') AS STAFF_OTHER,
     TO_CHAR(staff_total, '9990.0') AS STAFF_TOTAL,
 
-    TO_CHAR(attended,'9990.0') AS ATTENDED
+    TO_CHAR(attended,'990.9')||'%' AS ATTENDED
 
   FROM student_class_stats
-    
+
   INNER JOIN class ON class.class_id = student_class_stats.class_id
   INNER JOIN class_teacher ON class_teacher.class_id = class.class_id
   INNER JOIN teacher ON teacher.teacher_id = class_teacher.teacher_id
@@ -281,7 +268,7 @@ class_students AS (
 
 class_averages AS (
   SELECT
-    class.class||' ('||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname || ')' AS LABEL,
+    class.class||'<br>('||COALESCE(s2.salutation||' ','')||c2.firstname||' '||c2.surname || ')' AS LABEL,
     c2.surname||', '||c2.firstname AS TEACHER_ORDER,
     10000 AS SORT_ORDER,
     '** All students' AS STUDENT_NAME,
@@ -295,11 +282,11 @@ class_averages AS (
     TO_CHAR(student_total, '9990.0') AS STUDENT_TOTAL,
 
     TO_CHAR(staff_event,'990.9') AS STAFF_EVENT,
-    TO_CHAR(staff_away,'990.9') AS STAFF_AWAY,
+    TO_CHAR(staff_other,'990.9') AS STAFF_OTHER,
     TO_CHAR(staff_personal,'990.9') AS STAFF_PERSONAL,
     TO_CHAR(staff_total, '9990.0') AS STAFF_TOTAL,
 
-    TO_CHAR(to_attend-absent,'990.9') AS ATTENDED
+    TO_CHAR(attended,'9990.9') || '%' AS ATTENDED
 
   FROM overall_class_averages
 
@@ -309,31 +296,44 @@ class_averages AS (
   INNER JOIN contact c2 ON c2.contact_id = teacher.contact_id
   INNER JOIN salutation s2 ON s2.salutation_id = c2.salutation_id
 ),
-    
+
 final_report AS (
   SELECT * FROM class_students
   UNION
   SELECT * FROM class_averages
 )
 
-SELECT
-  label,
-  TO_CHAR((SELECT report_start FROM report_vars),'DD Mon') || ' to ' || TO_CHAR((SELECT report_end FROM report_vars),'DD Mon YYYY') AS "REPORT_SCOPE",
-  student_name,
-  homeroom,
-  periods,
-  -- students
-  absent,
-  on_event,
-  appointment,
-  student_total,
-  -- staff
-  staff_event,
-  staff_away,
-  staff_personal,
-  staff_total,
-  attended
+-- 5442
 
-FROM final_report
+--SELECT * FROM students_on_event
+--SELECT * FROM student_appointments
+--SELECT * FROM staff_on_event
+SELECT * FROM raw_data WHERE class_id = 5442
+--SELECT * FROM student_class_stats
+--SELECT * FROM overall_class_averages
+--SELECT * FROM class_students
+--SELECT * FROM class_averages
+--SELECT * FROM final_report
 
-ORDER BY final_report.teacher_order, final_report.label, final_report.sort_order
+
+-- SELECT
+--   label,
+--   TO_CHAR((SELECT report_start FROM report_vars),'DD Mon') || ' to ' || TO_CHAR((SELECT report_end FROM report_vars),'DD Mon YYYY') AS "REPORT_SCOPE",
+--   student_name,
+--   REPLACE(homeroom, ' Home Room ', ' ') AS "HOMEROOM",
+--   to_attend,
+--   periods,
+--   ((SELECT BUSINESS_DAYS_COUNT FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM report_vars), (SELECT report_end FROM report_vars)))) * 6) AS "MAX_PERIODS",
+--   absent,
+--   on_event,
+--   appointment,
+--   student_total,
+--   staff_event,
+--   staff_other,
+--   staff_personal,
+--   staff_total,
+--   attended
+
+-- FROM final_report
+
+-- ORDER BY final_report.teacher_order, final_report.label, final_report.sort_order

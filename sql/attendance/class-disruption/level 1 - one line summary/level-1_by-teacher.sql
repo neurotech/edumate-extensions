@@ -1,6 +1,7 @@
 WITH report_vars AS (
   SELECT
-    (SELECT start_date FROM term WHERE term = 'Term 1' AND YEAR(start_date) = YEAR(current date) FETCH FIRST 1 ROW ONLY) AS "REPORT_START",
+    --(SELECT start_date FROM term WHERE term = 'Term 1' AND YEAR(start_date) = YEAR(current date) FETCH FIRST 1 ROW ONLY) AS "REPORT_START",
+    (current date - 11 DAYS) AS "REPORT_START",
     (current date) AS "REPORT_END"
 
   FROM SYSIBM.sysdummy1
@@ -111,8 +112,8 @@ WITH report_vars AS (
         CASE WHEN students_on_event.student_id is not null THEN 1 ELSE 0 END AS ON_EVENT,
         CASE WHEN student_appointments.student_id is not null OR attend_status.attend_status_id IN (18,19,20) THEN 1 ELSE 0 END AS APPOINTMENT,
         CASE WHEN staff_on_event.staff_id is not null THEN 1 ELSE 0 END AS STAFF_EVENT,
-        CASE WHEN away_reason.away_reason_id IN (1,3,8,97,98,121,146,169) THEN 1 ELSE 0 END AS STAFF_PERSONAL,
-        CASE WHEN away_reason.away_reason_id is not null AND away_reason.away_reason_id NOT IN (1,3,8,97,98,121,146,169) THEN 1 ELSE 0 END AS STAFF_AWAY
+        CASE WHEN away_reason.away_reason_id IN (1,3,8,10,75,97,98,121,146,169) THEN 1 ELSE 0 END AS STAFF_PERSONAL,
+        CASE WHEN away_reason.away_reason_id is not null AND away_reason.away_reason_id IN (5,6,9,25,49,73,74) THEN 1 ELSE 0 END AS STAFF_OTHER
 /*        CASE WHEN students_on_event.student_id is not null THEN 'Student Event'
             WHEN staff_on_event.staff_id is not null THEN 'Staff on Event'
             WHEN student_appointments.student_id is not null THEN 'Student Appointment'
@@ -127,7 +128,7 @@ WITH report_vars AS (
             AND period_class.timetable_id = timetabled_dates.timetable_id
  
         INNER JOIN class ON class.class_id = period_class.class_id
-            AND class.class_type_id NOT IN (2,6,8,1000,1001,1002,1003)
+            AND class.class_type_id NOT IN (2,4,6,8,1000,1001,1002,1003)
         INNER JOIN perd_cls_teacher ON perd_cls_teacher.period_class_id = period_class.period_class_id
         INNER JOIN teacher ON teacher.teacher_id = perd_cls_teacher.teacher_id
         INNER JOIN staff ON staff.contact_id = teacher.contact_id
@@ -178,7 +179,7 @@ WITH report_vars AS (
         FLOAT(SUM(appointment))*100/COUNT(appointment) AS APPOINTMENT,
         FLOAT(SUM(staff_event))*100/COUNT(staff_event) AS STAFF_EVENT,
         FLOAT(SUM(staff_personal))*100/COUNT(staff_personal) AS STAFF_PERSONAL,
-        FLOAT(SUM(staff_away))*100/COUNT(staff_away) AS STAFF_AWAY,
+        FLOAT(SUM(staff_other))*100/COUNT(staff_other) AS STAFF_OTHER,
         FLOAT(SUM(to_attend-absent)) AS ATTENDED
     FROM raw_data
     GROUP BY contact_id
@@ -210,9 +211,9 @@ WITH report_vars AS (
         TO_CHAR(FLOAT((absent) + (on_event) + (appointment)), '990.9')||'%' AS STUDENT_TOTAL,
         
         TO_CHAR(staff_event,'990.9')||'%' AS STAFF_EVENT,
-        TO_CHAR(staff_away,'990.9')||'%' AS STAFF_AWAY,
+        TO_CHAR(staff_other,'990.9')||'%' AS STAFF_OTHER,
         TO_CHAR(staff_personal,'990.9')||'%' AS STAFF_PERSONAL,
-        TO_CHAR(FLOAT((staff_event) + (staff_away) + (staff_personal)), '990.9')||'%' AS STAFF_TOTAL,
+        TO_CHAR(FLOAT((staff_event) + (staff_other) + (staff_personal)), '990.9')||'%' AS STAFF_TOTAL,
 
         TO_CHAR(to_attend-absent,'990.9')||'%' AS ATTENDED
     FROM overall_teacher_stats
@@ -224,15 +225,15 @@ WITH report_vars AS (
 
 SELECT
   TO_CHAR((SELECT report_start FROM report_vars),'DD Month YYYY') || ' to ' || TO_CHAR((SELECT report_end FROM report_vars),'DD Month YYYY')AS "REPORT_SCOPE",
-  label ,
   teacher_name,
   periods,
+  ((SELECT BUSINESS_DAYS_COUNT FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM report_vars), (SELECT report_end FROM report_vars)))) * 6) AS "MAX_PERIODS",
   absent,
   on_event,
   appointment,
   student_total,
   staff_event,
-  staff_away,
+  staff_other,
   staff_personal,
   staff_total,
   attended
