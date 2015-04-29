@@ -1,7 +1,7 @@
 WITH raw_data AS (
   --SELECT * FROM TABLE(DB2INST1.get_class_disruptions((current date - 11 days), (current date)))
-  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-03-16'), DATE('2015-03-27')))
-  WHERE class LIKE '[[Class=query_list(SELECT DISTINCT class FROM view_student_class_enrolment WHERE academic_year = YEAR(current date) AND class_type_id IN (1,9,10,1101,1124,1148) ORDER BY class)]]'
+  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-01-26'), DATE('2015-04-03')))
+  WHERE class LIKE '[[Class=query_list(SELECT DISTINCT class FROM view_student_class_enrolment WHERE academic_year = YEAR(current date) AND class_type_id IN (1,9,1124) ORDER BY class)]]'
 ),
 
 student_homeroom AS (
@@ -60,7 +60,8 @@ class_sizes AS (
 
 class_stats AS (
   SELECT
-    0000 AS SORT_ORDER,
+    --0000 AS SORT_ORDER,
+    ROW_NUMBER() OVER (PARTITION BY raw_data.class_id) AS "SORT_ORDER",
     raw_data.class_id,
     raw_data.student_id,
 
@@ -107,7 +108,7 @@ class_averages_totals AS (
 class_final_stats AS (
   SELECT
     9999 AS SORT_ORDER,
-    null AS CLASS_ID,
+    class_averages_totals.class_id AS CLASS_ID,
     null AS STUDENT_ID,
     student_periods,
     absent,
@@ -133,12 +134,12 @@ combined AS (
 )
 
 SELECT
-  (SELECT class FROM raw_data FETCH FIRST 1 ROW ONLY) AS CLASS,
+  class.class,
   (TO_CHAR((current date), 'DD Month, YYYY')) AS "GEN_DATE",
   (CHAR(TIME(current timestamp), USA)) AS "GEN_TIME",
   TO_CHAR((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY') || ' to ' || TO_CHAR((SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY')AS "REPORT_SCOPE",
   student_periods,
-  (((SELECT BUSINESS_DAYS_COUNT FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) * 6) - 6) AS "MAX_PERIODS",
+  (SELECT ((business_days_count * 6) - (6 * (business_days_count / 10))) AS MAX_PERIODS FROM TABLE(DB2INST1.business_days_count((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) AS "MAX_PERIODS",
   class_teachers_aggregate.teachers,
   (CASE WHEN combined.student_id IS null THEN '------------' ELSE UPPER(contact.surname)||', '||COALESCE(contact.preferred_name,contact.firstname) END) AS STUDENT_NAME,
   (CASE WHEN combined.student_id IS null THEN 'Averages/Totals' ELSE (CASE WHEN student_homeroom.homeroom IS null THEN ('*** Left: ' || TO_CHAR(gass.end_date, 'DD Mon, YYYY')) ELSE REPLACE(student_homeroom.homeroom, ' Home Room ', ' ') END) END) AS "HOMEROOM",
@@ -154,10 +155,11 @@ SELECT
 
 FROM combined
 
+LEFT JOIN class ON class.class_id = combined.class_id
 LEFT JOIN class_teachers_aggregate ON class_teachers_aggregate.class_id = combined.class_id
 LEFT JOIN student ON student.student_id = combined.student_id
 LEFT JOIN contact ON contact.contact_id = student.contact_id
 LEFT JOIN student_homeroom ON student_homeroom.student_id = student.student_id AND student_homeroom.row_num = 1
 LEFT JOIN TABLE(EDUMATE.getallstudentstatus(current date)) gass ON gass.student_id = combined.student_id
 
-ORDER BY sort_order, contact.surname, contact.preferred_name, contact.firstname
+ORDER BY class.class, sort_order, contact.surname, contact.preferred_name, contact.firstname
