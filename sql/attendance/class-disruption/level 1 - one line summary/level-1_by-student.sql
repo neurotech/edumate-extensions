@@ -1,6 +1,6 @@
 WITH raw_data AS (
   --SELECT * FROM TABLE(DB2INST1.get_class_disruptions((current date - 11 days), (current date)))
-  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-03-16'), DATE('2015-03-27')))
+  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-01-26'), DATE('2015-04-03')))
 ),
 
 student_homeroom AS (
@@ -94,7 +94,7 @@ students_and_teachers AS (
   SELECT
     student_scheduled_periods.student_id,
     student_scheduled_periods.periods AS "STUDENT_PERIODS",
-    (((SELECT BUSINESS_DAYS_COUNT FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) * 6) - 6) AS "MAX_PERIODS",
+    (SELECT ((business_days_count * 6) - (6 * (business_days_count / 10))) AS MAX_PERIODS FROM TABLE(DB2INST1.business_days_count((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) AS "MAX_PERIODS",
     student_stats.absent,
     student_stats.on_event,
     student_stats.appointment,
@@ -110,6 +110,7 @@ students_and_teachers AS (
 
 combined AS (
   SELECT
+    123 AS SORT_ORDER,
     students_and_teachers.student_id,
     (CASE WHEN student_homeroom.homeroom IS null THEN ('*** Left: ' || TO_CHAR(gass.end_date, 'DD Mon, YYYY')) ELSE student_homeroom.homeroom END) AS "HOMEROOM",
     student_class_counts.classes,
@@ -132,13 +133,41 @@ combined AS (
   INNER JOIN student_class_sizes ON student_class_sizes.student_id = students_and_teachers.student_id
   LEFT JOIN student_homeroom ON student_homeroom.student_id = students_and_teachers.student_id AND student_homeroom.row_num = 1
   LEFT JOIN TABLE(EDUMATE.getallstudentstatus(current date)) gass ON gass.student_id = students_and_teachers.student_id
+),
+
+final_line AS (
+  SELECT
+    9999 AS SORT_ORDER,
+    null AS STUDENT_ID,
+    'Averages/Totals:' AS HOMEROOM,
+    SUM(classes) AS CLASSES,
+    AVG(size) AS SIZE,
+    AVG(student_periods) AS STUDENT_PERIODS,
+    AVG(max_periods) AS MAX_PERIODS,
+    AVG(absent) AS ABSENT,
+    AVG(on_event) AS ON_EVENT,
+    AVG(appointment) AS APPOINTMENT,
+    AVG(student_total) AS STUDENT_TOTAL,
+    AVG(teacher_periods) AS TEACHER_PERIODS,
+    AVG(staff_event) AS STAFF_EVENT,
+    AVG(staff_personal) AS STAFF_PERSONAL,
+    AVG(staff_other) AS STAFF_OTHER,
+    AVG(staff_total) AS STAFF_TOTAL
+
+  FROM combined
+),
+
+combined_and_final_line AS (
+  SELECT * FROM final_line
+  UNION ALL
+  SELECT * FROM combined
 )
 
 SELECT
   (TO_CHAR((current date), 'DD Month, YYYY')) AS "GEN_DATE",
   (CHAR(TIME(current timestamp), USA)) AS "GEN_TIME",
   TO_CHAR((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY') || ' to ' || TO_CHAR((SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY')AS "REPORT_SCOPE",
-  UPPER(contact.surname) || ', ' || COALESCE(contact.preferred_name,contact.firstname) AS STUDENT_NAME,
+  (CASE WHEN combined_and_final_line.student_id IS NULL THEN '------------' ELSE UPPER(contact.surname) || ', ' || COALESCE(contact.preferred_name,contact.firstname) END) AS STUDENT_NAME,
   REPLACE(homeroom, ' Home Room ', ' ') AS "HOMEROOM",
   classes,
   size,
@@ -147,7 +176,7 @@ SELECT
   on_event AS STUDENT_EVENT,
   appointment AS STUDENT_APPOINTMENT,
   absent AS STUDENT_ABSENT,
-  TO_CHAR(student_total, '990') || '%' AS STUDENT_TOTAL,
+  TO_CHAR(student_total, '990.00') || '%' AS STUDENT_TOTAL,
   teacher_periods,
   staff_event,
   staff_other,
@@ -155,9 +184,9 @@ SELECT
   TO_CHAR(staff_total, '990') || (CASE WHEN staff_total = 0 THEN '' ELSE ' (' || REPLACE(TO_CHAR((staff_total / teacher_periods * 100), '990') || '%)', ' ', '') END)  AS STAFF_TOTAL,
   TO_CHAR(FLOAT(100 - FLOAT(student_total + FLOAT(staff_total / teacher_periods * 100))), '990') || '%' AS TEACHING_TIME
 
-FROM combined
+FROM combined_and_final_line
 
-INNER JOIN student ON student.student_id = combined.student_id
-INNER JOIN contact ON contact.contact_id = student.contact_id
+LEFT JOIN student ON student.student_id = combined_and_final_line.student_id
+LEFT JOIN contact ON contact.contact_id = student.contact_id
 
-ORDER BY UPPER(contact.surname), contact.preferred_name, contact.firstname
+ORDER BY sort_order, UPPER(contact.surname), contact.preferred_name, contact.firstname
