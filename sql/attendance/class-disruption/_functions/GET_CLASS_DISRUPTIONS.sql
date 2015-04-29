@@ -188,7 +188,7 @@ FROM timetabled_dates
       AND period_class.timetable_id = timetabled_dates.timetable_id
 
   INNER JOIN class ON class.class_id = period_class.class_id
-      AND class.class_type_id IN (1,9,10,1101,1124,1148)
+      AND class.class_type_id IN (1,9,1124)
   INNER JOIN perd_cls_teacher ON perd_cls_teacher.period_class_id = period_class.period_class_id
   INNER JOIN teacher ON teacher.teacher_id = perd_cls_teacher.teacher_id
   INNER JOIN staff ON staff.contact_id = teacher.contact_id
@@ -227,6 +227,23 @@ FROM timetabled_dates
   LEFT JOIN student_appointments ON student_appointments.student_id = view_student_class_enrolment.student_id
       AND student_appointments.start_date <= TIMESTAMP(timetabled_dates.date_on,period.end_time)
       AND student_appointments.end_date >= TIMESTAMP(timetabled_dates.date_on,period.start_time)
+
+  WHERE
+    class.class NOT LIKE '%Life Skills%'
+    AND
+    class.class NOT LIKE '% Study%'
+    AND
+    class.class NOT LIKE '%Distance%'
+    AND
+    class.class NOT LIKE '%TVET%'
+    AND
+    class.class NOT LIKE '%pen High%'
+    AND
+    class.class NOT LIKE '%pprenticeship%'
+    AND
+    class.class NOT LIKE '%raineeship%'
+    AND
+    class.class NOT LIKE '%aturday School%'
 )
 
   SELECT
