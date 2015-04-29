@@ -1,6 +1,6 @@
 WITH raw_data AS (
   --SELECT * FROM TABLE(DB2INST1.get_class_disruptions((current date - 11 days), (current date)))
-  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-03-16'), DATE('2015-03-27')))
+  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-01-26'), DATE('2015-04-03')))
 ),
 
 teacher_period_counts AS (
@@ -104,7 +104,7 @@ students_and_teachers AS (
     teacher_scheduled_periods.contact_id,
     teacher_scheduled_periods.class_id,
     student_scheduled_periods.periods AS "STUDENT_PERIODS",
-    (((SELECT BUSINESS_DAYS_COUNT FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) * 6) - 6) AS "MAX_PERIODS",
+    (SELECT ((business_days_count * 6) - (6 * (business_days_count / 10))) AS MAX_PERIODS FROM TABLE(DB2INST1.business_days_count((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) AS "MAX_PERIODS",
     student_stats.absent,
     student_stats.on_event,
     student_stats.appointment,
@@ -134,14 +134,14 @@ class_totals AS (
     SUM(absent) AS absent,
     SUM(on_event) AS on_event,
     SUM(appointment) AS appointment,
-    FLOAT(SUM(absent) + SUM(on_event) + SUM(appointment)) / FLOAT(student_periods * teacher_class_sizes.size)  * 100 AS STUDENT_TOTAL,
+    FLOAT(SUM(absent) + SUM(on_event) + SUM(appointment)) / FLOAT(teacher_periods * teacher_class_sizes.size)  * 100 AS STUDENT_TOTAL,
     
     SUM(staff_event) AS STAFF_EVENT,
     SUM(staff_personal) AS STAFF_PERSONAL,
     SUM(staff_other) AS STAFF_OTHER,
     FLOAT(SUM(staff_event) + SUM(staff_personal) + SUM(staff_other)) AS STAFF_TOTAL,
     
-    (100 - (FLOAT(SUM(absent) + SUM(on_event) + SUM(appointment)) / FLOAT(student_periods * teacher_class_sizes.size)  * 100 + (FLOAT(SUM(staff_event) + SUM(staff_personal) + SUM(staff_other)) / SUM(teacher_periods) * 100))) AS TEACHING_TIME
+    (100 - (FLOAT(SUM(absent) + SUM(on_event) + SUM(appointment)) / FLOAT(teacher_periods * teacher_class_sizes.size) * 100 + (FLOAT(SUM(staff_event) + SUM(staff_personal) + SUM(staff_other)) / SUM(teacher_periods) * 100))) AS TEACHING_TIME
 
   FROM students_and_teachers
   
@@ -149,7 +149,7 @@ class_totals AS (
   INNER JOIN teacher_class_counts ON teacher_class_counts.contact_id = students_and_teachers.contact_id
   INNER JOIN teacher_class_sizes ON teacher_class_sizes.contact_id = students_and_teachers.contact_id AND teacher_class_sizes.class_id = students_and_teachers.class_id
   
-  GROUP BY students_and_teachers.contact_id, students_and_teachers.class_id, class.class, teacher_class_counts.classes, teacher_class_sizes.size, student_periods
+  GROUP BY students_and_teachers.contact_id, students_and_teachers.class_id, class.class, teacher_class_counts.classes, teacher_class_sizes.size, student_periods, teacher_periods
 ),
 
 all_classes_summary AS (
@@ -166,7 +166,10 @@ all_classes_summary AS (
     SUM(absent) AS ABSENT,
     SUM(on_event) AS ON_EVENT,
     SUM(appointment) AS APPOINTMENT,
-    AVG(student_total) AS STUDENT_TOTAL,
+    --AVG(student_total) AS STUDENT_TOTAL,
+    FLOAT(SUM(absent) + SUM(on_event) + SUM(appointment)) / (SUM(teacher_periods) * AVG(size)) * 100 AS STUDENT_TOTAL,
+    
+--    FLOAT(SUM(absent) + SUM(on_event) + SUM(appointment)) / FLOAT(student_periods * teacher_class_sizes.size)  * 100 AS STUDENT_TOTAL,
     
     SUM(staff_event) AS STAFF_EVENT,
     SUM(staff_personal) AS STAFF_PERSONAL,
@@ -197,14 +200,17 @@ SELECT
     ELSE ''
   END) AS TEACHER_NAME,
   CASE WHEN class.class IS NULL THEN 'Averages/Totals:' ELSE (CASE WHEN LENGTH(class.class) > 35 THEN (LEFT(class.class, 15) || '...' || RIGHT(class.class, 15)) ELSE class.class END) END AS CLASS,
-  classes,
+  (CASE
+    WHEN sort_order = 1 THEN TO_CHAR(classes)
+    ELSE '-'
+  END) AS CLASSES,
   size,
   teacher_periods,
   max_periods,
   on_event AS STUDENT_ON_EVENT,
   appointment AS STUDENT_APPOINTMENT,
   absent AS STUDENT_ABSENT,
-  TO_CHAR(student_total, '990') || '%' AS STUDENT_TOTAL,
+  TO_CHAR(student_total, '990.00') || '%' AS STUDENT_TOTAL,
   staff_event,
   staff_personal,
   staff_other,
