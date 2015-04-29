@@ -1,5 +1,5 @@
 WITH raw_data AS (
-  SELECT * FROM TABLE(DB2INST1.get_class_disruptions((current date - 11 days), (current date)))
+  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-01-26'), DATE('2015-04-03')))
 ),
 
 student_homeroom AS (
@@ -91,7 +91,7 @@ SELECT
   class,
   to_attend AS "PERIODS_W_TEACHER",
   periods AS "ALL_TIMETABLED_PERIODS",
-  ((SELECT BUSINESS_DAYS_COUNT FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) * 6) AS "MAX_PERIODS",
+  (SELECT ((business_days_count * 6) - (6 * (business_days_count / 10))) AS MAX_PERIODS FROM TABLE(DB2INST1.business_days_count((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) AS "MAX_PERIODS",
   absent AS "STUDENT_ABSENT",
   on_event AS "STUDENT_ON_EVENT",
   appointment AS "STUDENT_APPOINTMENT",
