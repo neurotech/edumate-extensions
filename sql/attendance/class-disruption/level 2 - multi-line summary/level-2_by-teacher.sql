@@ -199,6 +199,7 @@ SELECT
     WHEN sort_order = 9999 THEN '------------'
     ELSE ''
   END) AS TEACHER_NAME,
+
   CASE WHEN class.class IS NULL THEN 'Averages/Totals:' ELSE (CASE WHEN LENGTH(class.class) > 35 THEN (LEFT(class.class, 15) || '...' || RIGHT(class.class, 15)) ELSE class.class END) END AS CLASS,
   (CASE
     WHEN sort_order = 1 THEN TO_CHAR(classes)
@@ -216,7 +217,7 @@ SELECT
   staff_other,
   TO_CHAR(staff_total, '990') || (CASE WHEN staff_total = 0 THEN '' ELSE ' (' || REPLACE(TO_CHAR((staff_total / teacher_periods * 100), '990') || '%)', ' ', '') END)  AS STAFF_TOTAL,
   TO_CHAR(teaching_time, '990') || '%' AS TEACHING_TIME
-  
+
 FROM combined
 
 LEFT JOIN contact ON contact.contact_id = combined.contact_id
