@@ -1,10 +1,3 @@
--- Developed by eduard@eduverve.com.au for Rosebank College 25 Aug 2014
--- Must have results 2/3rds of all tasks
--- AVG_SCORE is the based on the percentile (finalmarks normalised to 0-100%)
--- Will respect Year 12 start in October
--- Weighted by course units AND course weight in manage marks AND task weight
--- Takes all tasks in academic year, but only for report_period enabled courses
-
 WITH course_units(unit_number) AS
     (
     SELECT
@@ -21,8 +14,8 @@ WITH course_units(unit_number) AS
     SELECT
         report_period_id
     FROM report_period
-    WHERE report_period.report_period = '2014 Year 11 Ranking'
-        --report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE LOWER(report_period) LIKE '%ranking%' AND end_date >= current_date - 2 YEARS AND start_date <= current_date)]]'
+    WHERE --report_period.report_period = '2014 Year 11 Ranking'
+          report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE LOWER(report_period) LIKE '%ranking%' AND end_date >= current_date - 2 YEARS AND start_date <= current_date)]]'
     ),
 
     student_form AS
@@ -76,6 +69,7 @@ WITH course_units(unit_number) AS
         INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
         -- student included in report period
         INNER JOIN student_form_run ON student_form_run.form_run_id = form_run.form_run_id
+        INNER JOIN TABLE(EDUMATE.getallstudentstatus(current date)) gass ON gass.student_id = student_form_run.student_id AND gass.student_status_id = 5
     ),
     
     -- get the results for all
@@ -85,6 +79,7 @@ WITH course_units(unit_number) AS
         included_courses.report_period_id,
         stud_task_raw_mark.student_id,
         coursework_task.academic_year_id,
+        department.department_id,
         course.course_id,
         course.course,
         course.units,
@@ -95,13 +90,15 @@ WITH course_units(unit_number) AS
         COUNT(stud_task_raw_mark.raw_mark) AS TOTAL_RESULTS
     FROM included_courses
         INNER JOIN course ON course.course_id = included_courses.course_id
+        INNER JOIN subject ON subject.subject_id = course.subject_id
+        INNER JOIN department ON department.department_id = subject.department_id
         -- get all tasks and results (unscaled)
         INNER JOIN coursework_task ON coursework_task.course_id = course.course_id
             AND coursework_task.due_date BETWEEN included_courses.start_date AND included_courses.end_date
         INNER JOIN task ON task.task_id = coursework_task.task_id
         INNER JOIN stud_task_raw_mark ON stud_task_raw_mark.task_id = task.task_id
     WHERE task.mark_out_of > 0 AND task.weighting > 0
-    GROUP BY included_courses.report_period_id, coursework_task.academic_year_id, stud_task_raw_mark.student_id, course.course_id, course.course, course.units
+    GROUP BY included_courses.report_period_id, coursework_task.academic_year_id, stud_task_raw_mark.student_id, department.department_id, course.course_id, course.course, course.units
     ),
 
     course_rankings AS
@@ -110,20 +107,30 @@ WITH course_units(unit_number) AS
         report_period_id,
         student_id,
         academic_year_id,
+        department_id,
         course_id,
         course,
         units,
         total_units,
         SUM(units) OVER (PARTITION BY student_id) AS QUALIFYING_UNITS,
         final_mark,
-        RANK() OVER (PARTITION BY course_id, academic_year_id ORDER BY ROUND(final_mark,0) DESC) AS COURSE_RANK,
-        MIN(final_mark) OVER (PARTITION BY course_id, academic_year_id) AS MIN_MARK,
-        MAX(final_mark) OVER (PARTITION BY course_id, academic_year_id) AS MAX_MARK,
+        --RANK() OVER (PARTITION BY course_id, academic_year_id ORDER BY ROUND(final_mark,0) DESC) AS COURSE_RANK,
+        --MIN(final_mark) OVER (PARTITION BY course_id, academic_year_id) AS MIN_MARK,
+        --MAX(final_mark) OVER (PARTITION BY course_id, academic_year_id) AS MAX_MARK,
         COUNT(final_mark) OVER (PARTITION BY course_id, academic_year_id) AS COHORT
     FROM raw_course_results
     -- exclude students without not enough results + exclude normal maths course if they are doing extension2 maths
     WHERE total_results  >= FLOAT(total_tasks)*0.666
-        AND (has_extension2 = 0 OR course NOT LIKE '% Mathematics')
+    ),
+
+    sdmean AS (
+      SELECT
+        course_id,
+        STDDEV(final_mark) AS "SD",
+        AVG(final_mark) AS "MEAN"
+        
+      FROM raw_course_results
+      GROUP BY course_id
     ),
 
     final_scores AS
@@ -131,16 +138,29 @@ WITH course_units(unit_number) AS
     SELECT
         report_period_id,
         course_rankings.student_id,
-        course_id,
+        (CASE WHEN course_rankings.department_id IN (2, 25) THEN 'C' ELSE 'E' END) AS "CORE_OR_ELECTIVE",
+        course_rankings.course_id,
         course,
         units,
         total_units,
         final_mark,
-        ROUND(CASE WHEN max_mark = min_mark THEN 100 ELSE(final_mark - min_mark) *100 / (max_mark - min_mark) END,3) AS FINAL_SCORE,
-        course_rank
+        -- Scaled
+        (CASE
+          WHEN cohort < 15 THEN final_mark
+          ELSE ROUND(((final_mark - sdmean.mean) / sdmean.sd * 12.5 + 60),3)
+        END) AS "FINAL_SCALED_MARK",
+        RANK() OVER (PARTITION BY course_rankings.course_id ORDER BY ROUND((CASE WHEN cohort < 15 THEN final_mark ELSE ROUND(((final_mark - sdmean.mean) / sdmean.sd * 12.5 + 60),3) END),0) DESC) AS COURSE_RANK
+        
+        -- Old:
+        --ROUND(CASE WHEN max_mark = min_mark THEN 100 ELSE(final_mark - min_mark) *100 / (max_mark - min_mark) END,3) AS FINAL_SCORE,
+        --course_rank
+        
     FROM course_rankings
-        INNER JOIN included_students ON included_students.student_id = course_rankings.student_id
-    WHERE qualifying_units >= 10   
+    
+    INNER JOIN included_students ON included_students.student_id = course_rankings.student_id
+    INNER JOIN sdmean ON sdmean.course_id = course_rankings.course_id
+    
+    WHERE qualifying_units BETWEEN 10 and 14
     ),
 
     unit_results AS
@@ -150,14 +170,17 @@ WITH course_units(unit_number) AS
         student_id,
         course_id,
         course,
+        core_or_elective,
         total_units,
         unit_number,
         final_mark,
-        final_score,
+        final_scaled_mark,
         course_rank,
-        SUM(1) OVER (PARTITION BY student_id ORDER BY (CASE WHEN LOWER(course) LIKE '%english%' THEN 1 ELSE 2 END), final_score DESC NULLS LAST, unit_number) AS ENGLISH_UNITS 
+        SUM(1) OVER (PARTITION BY student_id ORDER BY (CASE WHEN LOWER(course) LIKE '%english%' THEN 1 ELSE 2 END), final_scaled_mark DESC NULLS LAST, unit_number) AS ENGLISH_UNITS 
+    
     FROM final_scores
-        INNER JOIN course_units ON course_units.unit_number <= final_scores.units
+    
+    INNER JOIN course_units ON course_units.unit_number <= final_scores.units
     ),
 
     ranked_unit_results AS
@@ -167,11 +190,15 @@ WITH course_units(unit_number) AS
         student_id,
         course_id,
         course,
+        core_or_elective,
         total_units,
         final_mark,
-        final_score,
+        final_scaled_mark,
         course_rank,
-        SUM(1) OVER (PARTITION BY student_id ORDER BY (CASE WHEN english_units <= 2 THEN 1 ELSE 2 END), final_score DESC NULLS LAST, unit_number) AS RANKED_UNITS
+        --SUM(1) OVER (PARTITION BY student_id, core_or_elective ORDER BY final_scaled_mark DESC nulls last, unit_number) AS RANKED_UNITS,
+        SUM(1) OVER (PARTITION BY student_id, core_or_elective ORDER BY course_rank ASC, unit_number) AS RANKED_UNITS,
+        unit_number
+    
     FROM unit_results
     ),
 
@@ -181,16 +208,33 @@ WITH course_units(unit_number) AS
         report_period_id,
         student_id,
         course_id,
+        core_or_elective,
         total_units,
         final_mark,
-        final_score,
+        final_scaled_mark,
         course_rank,
-        MAX(CASE WHEN ranked_units <= 10 THEN final_mark ELSE null END) AS BEST_MARK,
-        MAX(CASE WHEN ranked_units <= 10 THEN final_score ELSE null END) AS BEST_SCORE,
-        SUM(CASE WHEN ranked_units <= 10 THEN 1 ELSE 0 END) AS BEST_UNITS,
-        MAX(CASE WHEN ranked_units <= 10 THEN course_rank ELSE null END) AS BEST_RANK
+        (CASE
+          WHEN core_or_elective = 'C' THEN MAX(CASE WHEN core_or_elective = 'C' AND ranked_units <= 6 THEN final_mark ELSE null END)
+          WHEN core_or_elective = 'E' THEN MAX(CASE WHEN core_or_elective = 'E' AND ranked_units <= 14 THEN final_mark ELSE null END)
+        END) AS "BEST_MARK",
+        (CASE
+          WHEN core_or_elective = 'C' THEN MAX(CASE WHEN core_or_elective = 'C' AND ranked_units <= 6 THEN final_scaled_mark ELSE null END)
+          WHEN core_or_elective = 'E' THEN MAX(CASE WHEN core_or_elective = 'E' AND ranked_units <= 14 THEN final_scaled_mark ELSE null END)
+        END) AS "BEST_SCALED_MARK",
+
+        (CASE
+          WHEN core_or_elective = 'C' THEN SUM(CASE WHEN core_or_elective = 'C' AND ranked_units <= 6 THEN 1 ELSE 0 END)
+          WHEN core_or_elective = 'E' THEN SUM(CASE WHEN core_or_elective = 'E' AND ranked_units <= 14 THEN 1 ELSE 0 END)
+        END) AS "BEST_UNITS",
+        
+        (CASE
+          WHEN core_or_elective = 'C' THEN MAX(CASE WHEN core_or_elective = 'C' AND ranked_units <= 6 THEN course_rank ELSE null END)
+          WHEN core_or_elective = 'E' THEN MAX(CASE WHEN core_or_elective = 'E' AND ranked_units <= 14 THEN course_rank ELSE null END)
+        END) AS "BEST_RANK"
+
     FROM ranked_unit_results
-    GROUP BY report_period_id, student_id, course_id, total_units, final_mark, final_score, course_rank
+
+    GROUP BY report_period_id, student_id, course_id, core_or_elective, total_units, final_mark, final_scaled_mark, course_rank
     ),
 
     best_courses AS
@@ -201,47 +245,55 @@ WITH course_units(unit_number) AS
         SUM(CASE WHEN course_rank = 2 THEN 1 ELSE 0 END) AS SECONDS,
         SUM(CASE WHEN course_rank = 3 THEN 1 ELSE 0 END) AS THIRDS,
         total_units,
-        LISTAGG('['||course_rank||CASE WHEN best_units = 0 THEN '*' ELSE '' END||'] '||COALESCE(course.print_name,course.course),', ') WITHIN GROUP(ORDER BY course_rank) AS RANKING_DETAILS,
+        LISTAGG('[' || course_rank || CASE WHEN best_units = 0 THEN '*' ELSE '' END || '] ' || COALESCE(course.print_name,course.course),', ') WITHIN GROUP(ORDER BY core_or_elective DESC, best_units DESC, course_rank) AS RANKING_DETAILS,
         SUM(FLOAT(course_rank)*COALESCE(course_final_mark.weight,1)*units) / SUM(COALESCE(course_final_mark.weight,1)*units) AS OVERALL_WEIGHTED_RANK,
         SUM(FLOAT(final_mark)*COALESCE(course_final_mark.weight,1)*units) / SUM(COALESCE(course_final_mark.weight,1)*units) AS OVERALL_WEIGHTED_MARK,
-        SUM(FLOAT(final_score)*COALESCE(course_final_mark.weight,1)*units) / SUM(COALESCE(course_final_mark.weight,1)*units) AS OVERALL_WEIGHTED_SCORE,
+        SUM(FLOAT(final_scaled_mark)*COALESCE(course_final_mark.weight,1)*units) / SUM(COALESCE(course_final_mark.weight,1)*units) AS OVERALL_WEIGHTED_SCALED_MARK,
         SUM(FLOAT(best_rank)*COALESCE(course_final_mark.weight,1)*best_units) / SUM(COALESCE(course_final_mark.weight,1)*best_units) AS BEST_WEIGHTED_RANK,
         SUM(FLOAT(best_mark)*COALESCE(course_final_mark.weight,1)*best_units) / SUM(COALESCE(course_final_mark.weight,1)*best_units) AS BEST_WEIGHTED_MARK,
-        SUM(FLOAT(best_score)*COALESCE(course_final_mark.weight,1)*best_units) / SUM(COALESCE(course_final_mark.weight,1)*best_units) AS BEST_WEIGHTED_SCORE   
+        SUM(FLOAT(best_scaled_mark)*COALESCE(course_final_mark.weight,1)*best_units) / SUM(COALESCE(course_final_mark.weight,1)*best_units) AS BEST_WEIGHTED_SCALED_MARK
+    
     FROM best_x_units
-        INNER JOIN course ON course.course_id = best_x_units.course_id
-        LEFT JOIN course_final_mark ON course_final_mark.course_id = course.course_id
-            AND course_final_mark.report_period_id = best_x_units.report_period_id
+    
+    INNER JOIN course ON course.course_id = best_x_units.course_id
+    
+    LEFT JOIN course_final_mark ON course_final_mark.course_id = course.course_id
+      AND course_final_mark.report_period_id = best_x_units.report_period_id
+    
     GROUP BY student_id, total_units
     ),
 
     raw_report AS
     (
-    SELECT 
+    SELECT
+        (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
+        (CHAR(TIME(current timestamp), USA) || ' on ' || TO_CHAR((current date), 'DD Month, YYYY')) AS "PRINTED_AT",
         RANK() OVER (ORDER BY best_weighted_rank ASC) AS POS,
-        CASE WHEN RANK() OVER (ORDER BY best_weighted_rank ASC) = 1 THEN '**'
-            WHEN RANK() OVER (ORDER BY best_weighted_rank ASC) <= FLOAT(COUNT(student.student_id) OVER (PARTITION BY 1))*15/100+0.5 AND  RANK() OVER (ORDER BY best_weighted_rank ASC) <= 10 THEN '*'
-            ELSE '' END AS AW,
+        (CASE
+          WHEN RANK() OVER (ORDER BY best_weighted_rank ASC) = 1 THEN '**'
+          WHEN RANK() OVER (ORDER BY best_weighted_rank ASC) <= FLOAT(COUNT(student.student_id) OVER (PARTITION BY 1)) * 15 / 100 + 0.5 AND RANK() OVER (ORDER BY best_weighted_rank ASC) <= 10 THEN '*'
+          ELSE ''
+        END) AS AW,
         student_number AS STUDENT,
         student_form.form AS FORM,
-        firstname,
+        (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
         surname,
-        TO_CHAR(best_weighted_rank,'999.00') AS B10_RANK,
-        --TO_CHAR(best_weighted_mark,'999.00') AS B10_MARK,
-        TO_CHAR(best_weighted_score,'999.00') AS B10_PERC,
-        TO_CHAR(overall_weighted_rank,'999.00') AS ALL_RANK,
-        --TO_CHAR(overall_weighted_mark,'999.00') AS ALL_MARK,
-        TO_CHAR(overall_weighted_score,'999.00') AS ALL_PERC,
+        TO_CHAR(best_weighted_rank,'999.00') AS BEST_UNITS_RANK,
+        TO_CHAR(best_weighted_scaled_mark,'999.00') AS BEST_UNITS_PERC,
+        --TO_CHAR(overall_weighted_rank,'999.00') AS ALL_UNITS_RANK,
+        --TO_CHAR(overall_weighted_scaled_mark,'999.00') AS ALL_UNITS_PERC,
         total_units AS UNITS,
         firsts AS POS1,
         seconds AS POS2,
         thirds AS POS3,
         ranking_details AS ALL_RANKINGS
+
     FROM best_courses
-        INNER JOIN student ON student.student_id = best_courses.student_id
-        INNER JOIN contact ON contact.contact_id = student.contact_id
-        LEFT JOIN student_form ON student_form.student_id = student.student_id
+
+    INNER JOIN student ON student.student_id = best_courses.student_id
+    INNER JOIN contact ON contact.contact_id = student.contact_id
+    LEFT JOIN student_form ON student_form.student_id = student.student_id
     )
 
 SELECT * FROM raw_report
-ORDER BY 1
+ORDER BY pos

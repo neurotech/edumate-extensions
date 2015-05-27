@@ -1,4 +1,4 @@
-WITH course_units(unit_number) AS
+previous_course_units(unit_number) AS
     (
     SELECT
         INTEGER(1)
@@ -9,22 +9,20 @@ WITH course_units(unit_number) AS
     FROM sysibm.sysdummy1
     ),
 
-    selected_period AS
+    previous_selected_period AS
     (
-    SELECT
-        report_period_id
+    SELECT report_period_id
     FROM report_period
-    WHERE --report_period.report_period = '2014 Year 09/10 Combined Ranking'
-          report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE LOWER(report_period) LIKE '%ranking%' AND end_date >= current_date - 2 YEARS AND start_date <= current_date)]]'
+    WHERE report_period.report_period = (SELECT previous FROM report_vars)
     ),
 
-    student_form AS
+    previous_student_form AS
     (
     SELECT
         get_enroled_students_form_run.student_id,
         MAX(form.short_name) AS FORM
     FROM report_period 
-        INNER JOIN selected_period ON selected_period.report_period_id = report_period.report_period_id
+        INNER JOIN previous_selected_period ON previous_selected_period.report_period_id = report_period.report_period_id
         INNER JOIN table(edumate.get_enroled_students_form_run(report_period.end_date)) ON 1=1
         INNER JOIN form_run ON form_run.form_run_id = get_enroled_students_form_run.form_run_id
         INNER JOIN form ON form.form_id = form_run.form_id
@@ -35,7 +33,7 @@ WITH course_units(unit_number) AS
     ),
 
     -- get all courses that students in the report_period are doing
-    included_courses AS
+    previous_included_courses AS
     (
     SELECT DISTINCT
         view_student_class_enrolment.course_id,
@@ -45,7 +43,7 @@ WITH course_units(unit_number) AS
 
         FROM report_period
 
-        INNER JOIN selected_period ON selected_period.report_period_id = report_period.report_period_id
+        INNER JOIN previous_selected_period ON previous_selected_period.report_period_id = report_period.report_period_id
         INNER JOIN report_period_form_run ON report_period_form_run.report_period_id = report_period.report_period_id
         INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
         INNER JOIN timetable ON timetable.timetable_id = form_run.timetable_id
@@ -64,12 +62,12 @@ WITH course_units(unit_number) AS
     WHERE report_period_course.course_id is null
     ),
 
-    included_students AS
+    previous_included_students AS
     (
     SELECT DISTINCT
         student_form_run.student_id
     FROM report_period
-        INNER JOIN selected_period ON selected_period.report_period_id = report_period.report_period_id
+        INNER JOIN previous_selected_period ON previous_selected_period.report_period_id = report_period.report_period_id
         INNER JOIN report_period_form_run ON report_period_form_run.report_period_id = report_period.report_period_id
         INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
         -- student included in report period
@@ -81,7 +79,7 @@ WITH course_units(unit_number) AS
     raw_course_results AS
     (
     SELECT
-        included_courses.report_period_id,
+        previous_included_courses.report_period_id,
         stud_task_raw_mark.student_id,
         coursework_task.academic_year_id,
         department.department_id,
@@ -93,17 +91,17 @@ WITH course_units(unit_number) AS
         CAST(ROUND(SUM(FLOAT(stud_task_raw_mark.raw_mark) / FLOAT(task.mark_out_of) * FLOAT(task.weighting) * (CASE WHEN course.units = 1 THEN 50 ELSE 100 END)) / SUM(task.weighting),3) AS DECIMAL(6,3)) AS FINAL_MARK,
         COUNT(coursework_task.coursework_task_id) AS TOTAL_TASKS,
         COUNT(stud_task_raw_mark.raw_mark) AS TOTAL_RESULTS
-    FROM included_courses
-        INNER JOIN course ON course.course_id = included_courses.course_id
+    FROM previous_included_courses
+        INNER JOIN course ON course.course_id = previous_included_courses.course_id
         INNER JOIN subject ON subject.subject_id = course.subject_id
         INNER JOIN department ON department.department_id = subject.department_id
         -- get all tasks and results (unscaled)
         INNER JOIN coursework_task ON coursework_task.course_id = course.course_id
-            AND coursework_task.due_date BETWEEN included_courses.start_date AND included_courses.end_date
+            AND coursework_task.due_date BETWEEN previous_included_courses.start_date AND previous_included_courses.end_date
         INNER JOIN task ON task.task_id = coursework_task.task_id
         INNER JOIN stud_task_raw_mark ON stud_task_raw_mark.task_id = task.task_id
-    WHERE task.mark_out_of > 0 AND task.weighting > 0 AND stud_task_raw_mark.student_id IN (SELECT student_id FROM student_form)
-    GROUP BY included_courses.report_period_id, coursework_task.academic_year_id, stud_task_raw_mark.student_id, department.department_id, course.course_id, course.course, course.units
+    WHERE task.mark_out_of > 0 AND task.weighting > 0 AND stud_task_raw_mark.student_id IN (SELECT student_id FROM previous_previous_student_form)
+    GROUP BY previous_included_courses.report_period_id, coursework_task.academic_year_id, stud_task_raw_mark.student_id, department.department_id, course.course_id, course.course, course.units
     ),
 
     course_rankings AS
@@ -185,7 +183,7 @@ WITH course_units(unit_number) AS
         
     FROM course_rankings
     
-    INNER JOIN included_students ON included_students.student_id = course_rankings.student_id
+    INNER JOIN previous_included_students ON previous_included_students.student_id = course_rankings.student_id
     INNER JOIN sdmean ON sdmean.course_id = course_rankings.course_id
     
     WHERE qualifying_units >= 16
@@ -206,7 +204,7 @@ WITH course_units(unit_number) AS
         course_rank,
         SUM(1) OVER (PARTITION BY student_id ORDER BY (CASE WHEN LOWER(course) LIKE '%english%' THEN 1 ELSE 2 END), final_scaled_mark DESC NULLS LAST, unit_number) AS ENGLISH_UNITS 
     FROM final_scores
-    INNER JOIN course_units ON course_units.unit_number <= final_scores.units
+    INNER JOIN previous_course_units ON previous_course_units.unit_number <= final_scores.units
     ),
 
     ranked_unit_results AS
@@ -292,7 +290,7 @@ WITH course_units(unit_number) AS
     raw_report AS
     (
     SELECT
-        (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
+        (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM previous_selected_period)) AS "REPORT_PERIOD",
         (CHAR(TIME(current timestamp), USA) || ' on ' || TO_CHAR((current date), 'DD Month, YYYY')) AS "PRINTED_AT",
         RANK() OVER (ORDER BY best_weighted_rank ASC) AS POS,
         (CASE
@@ -301,7 +299,7 @@ WITH course_units(unit_number) AS
           ELSE ''
         END) AS AW,
         student_number AS STUDENT,
-        student_form.form AS FORM,
+        previous_student_form.form AS FORM,
         (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
         surname,
         TO_CHAR(best_weighted_rank,'999.00') AS BEST_UNITS_RANK,
@@ -318,7 +316,7 @@ WITH course_units(unit_number) AS
 
     INNER JOIN student ON student.student_id = best_courses.student_id
     INNER JOIN contact ON contact.contact_id = student.contact_id
-    LEFT JOIN student_form ON student_form.student_id = student.student_id
+    LEFT JOIN previous_student_form ON previous_student_form.student_id = student.student_id
     )
 
 SELECT * FROM raw_report
