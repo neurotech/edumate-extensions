@@ -1,20 +1,27 @@
+CREATE OR REPLACE FUNCTION DB2INST1.get_student_absences (onDate DATE)
+
+RETURNS TABLE
+(
+  STUDENT_ID INTEGER,
+  HOME_ROOM VARCHAR(50),
+  FORM_RUN VARCHAR(50),
+  DAILY_STATUS VARCHAR(50)
+)
+
+LANGUAGE SQL
+BEGIN ATOMIC
+RETURN
+
 WITH report_vars AS (
---  SELECT (date('[[Start date=date]]')) as "REPORT_DATE"
-  SELECT (date('2015-05-22')) as "REPORT_DATE"
+  SELECT onDate as "REPORT_DATE"
   FROM SYSIBM.SYSDUMMY1
 )
 
 SELECT
-  (SELECT TO_CHAR((report_date), 'DD Month, YYYY') FROM report_vars) AS "REPORT_DATE",
+  student.student_id,
+  REPLACE(class.print_name, '&#039;', '''') AS "HOME_ROOM",
   form_run.form_run,
-  student.student_number AS "LOOKUP_CODE",
-  (CASE WHEN preferred_name IS null THEN firstname ELSE preferred_name END) AS "FIRSTNAME",
-  surname,
-  class.print_name,
-  --TO_CHAR(date_on, 'dd/mm/yyyy') AS "DATE_ON",
   attendance_status_daily.daily_attendance_status AS "DAILY_STATUS"
-  --attendance_status_am.daily_attendance_status AS "AM_STATUS",
-  --attendance_status_pm.daily_attendance_status AS "PM_STATUS"
 
 FROM TABLE(EDUMATE.getallstudentstatus((SELECT report_date FROM report_vars))) a
 
@@ -41,6 +48,5 @@ WHERE
   a.student_status_id = 5
   AND daily_attendance.date_on = (SELECT report_date FROM report_vars)
   AND attendance_status_daily.daily_attendance_status_id NOT IN (0,1)
-  AND attendance_status_daily.daily_attendance_status_id IN (2,3,4,5,6,7,20,21,22,23)
-
-ORDER BY form_run, class.class, surname, firstname, date_on, daily_status DESC
+  AND attendance_status_daily.daily_attendance_status_id IN (2,3,4,5,6,7,20,21,22,23);
+END
