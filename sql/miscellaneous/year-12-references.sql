@@ -1,7 +1,7 @@
 WITH report_vars AS (
   SELECT
-    DATE('2013-10-18') AS "PRELIM_DATE",
-    DATE('2014-12-12') AS "SENIOR_DATE"
+    DATE('2014-10-18') AS "PRELIM_DATE",
+    DATE('2015-12-12') AS "SENIOR_DATE"
   
   FROM SYSIBM.SYSDUMMY1
 ),
@@ -138,9 +138,9 @@ senior_courses AS (
 
 SELECT
   student.student_number,
-  contact.surname,
   contact.firstname,
   contact.preferred_name,
+  contact.surname,
   hr.class AS "HOMEROOM",
   contact.birthdate AS "DOB",
   students.time_at_rbc,
