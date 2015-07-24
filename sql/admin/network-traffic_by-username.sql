@@ -67,7 +67,18 @@ teacher_timetable AS (
   INNER JOIN room ON room.room_id = period_class.room_id  
   
   -- Only show data for specific teacher
-  WHERE perd_cls_teacher.teacher_id = (SELECT teacher_id FROM teacher WHERE contact_id = (SELECT contact_id FROM sys_user WHERE username = (SELECT username FROM report_vars)))
+  WHERE
+    perd_cls_teacher.teacher_id = (SELECT teacher_id FROM teacher WHERE contact_id = (SELECT contact_id FROM sys_user WHERE username = (SELECT username FROM report_vars)))
+    AND
+    (class.class NOT LIKE ('12 Study%')
+    AND
+    class.class NOT LIKE  ('11 Study%')
+    AND
+    class.class NOT LIKE ('%Distance Education%')
+    AND
+    class.class NOT LIKE ('%Saturday%')
+    AND
+    class.class NOT LIKE ('%Work in the Community%'))
   
   ORDER BY timetable_structure.timetable_id, timetable_structure.term_id, timetable_structure.cycle_id, timetable_structure.day_index, period.start_time
 ),
@@ -133,7 +144,7 @@ timetable_skeleton AS (
   INNER JOIN period_cycle_day pcd ON pcd.cycle_day_id = cycle_day.cycle_day_id
   INNER JOIN period ON period.period_id = pcd.period_id
   
-  WHERE cycle_id = 1
+  WHERE cycle_id = 25
   
   ORDER BY cycle_day.day_index, period.start_time
 ),
@@ -156,8 +167,8 @@ period_totals AS (
   SELECT
     day_index,
     period_id,
-    SUM(data_in) AS "DATA_IN_TOTAL",
-    SUM(data_out) AS "DATA_OUT_TOTAL"
+    SUM(BIGINT(data_in)) AS "DATA_IN_TOTAL",
+    SUM(BIGINT(data_out)) AS "DATA_OUT_TOTAL"
     
   FROM traffic_by_period
   
@@ -184,10 +195,10 @@ timetable_and_totals AS (
     timetable_skeleton.short_name,
     timetable_skeleton.start_time,
     teacher_timetable_aggregate.class,
-    teacher_timetable_aggregate.room,
+    (CASE WHEN teacher_timetable_aggregate.room IS null THEN '' ELSE teacher_timetable_aggregate.room END) AS ROOM,
     --timetable_skeleton.end_time,
-    (CASE WHEN period_totals.data_in_total / 1024 < 100 THEN 0 ELSE (period_totals.data_in_total / 1024) END) AS "DOWNLOADED",
-    (CASE WHEN period_totals.data_out_total / 1024 < 100 THEN 0 ELSE (period_totals.data_out_total / 1024) END) AS "UPLOADED"
+    (CASE WHEN FLOAT(period_totals.data_in_total) / 1024 < 100 THEN 0 ELSE (BIGINT(period_totals.data_in_total) / 1024) END) AS "DOWNLOADED",
+    (CASE WHEN FLOAT(period_totals.data_out_total) / 1024 < 100 THEN 0 ELSE (BIGINT(period_totals.data_out_total) / 1024) END) AS "UPLOADED"
   
   FROM timetable_skeleton
   
@@ -202,115 +213,124 @@ day_one_totals AS (
   SELECT
     period,
     short_name,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     start_time,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_1_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_1_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 1
+  
+  GROUP BY period, short_name, start_time, downloaded, uploaded
 ),
 
 day_two_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_2_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_2_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 2
+  
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_three_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_3_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_3_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 3
+
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_four_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_4_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_4_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 4
+  
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_five_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_5_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_5_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 5
+  
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_six_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_6_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_6_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 6
+  
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_seven_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_7_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_7_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 7
+  -- AND room IS NOT null
+  
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_eight_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_8_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_8_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 8
+  
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_nine_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_9_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_9_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 9
+  
+  GROUP BY period, downloaded, uploaded
 ),
 
 day_ten_totals AS (
   SELECT
     period,
-    class,
-    room,
+    LISTAGG(class || ' (' || room || ')', ', ') WITHIN GROUP(ORDER BY class) AS class,
     (CASE WHEN VARCHAR(downloaded) = '0' THEN '< 100' ELSE VARCHAR(downloaded) END) AS "DAY_10_DOWNLOADED",
     (CASE WHEN VARCHAR(uploaded) = '0' THEN '< 100' ELSE VARCHAR(uploaded) END) AS "DAY_10_UPLOADED"
 
   FROM timetable_and_totals WHERE day_index = 10
+  
+  GROUP BY period, downloaded, uploaded
 )
-
---SELECT * FROM teacher_timetable
 
 -- Final query
 SELECT
@@ -320,25 +340,25 @@ SELECT
   ((SELECT * FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM report_vars), (SELECT report_end FROM report_vars)))) / 10) AS "FN_COUNT",
   day_one_totals.period,
   day_one_totals.short_name,
-  day_one_totals.class || ' (' || day_one_totals.room || ')' AS "DAY_ONE_TT",
+  day_one_totals.class AS "DAY_ONE_TT",
   day_one_totals.day_1_downloaded || ' KB down, ' || day_one_totals.day_1_uploaded || ' KB up' AS "DAY_ONE_DATA",
-  day_two_totals.class || ' (' || day_two_totals.room || ')' AS "DAY_TWO_TT",
+  day_two_totals.class AS "DAY_TWO_TT",
   day_two_totals.day_2_downloaded || ' KB down, ' || day_two_totals.day_2_uploaded || ' KB up' AS "DAY_TWO_DATA",
-  day_three_totals.class || ' (' || day_three_totals.room || ')' AS "DAY_THREE_TT",
+  day_three_totals.class AS "DAY_THREE_TT",
   day_three_totals.day_3_downloaded || ' KB down, ' || day_three_totals.day_3_uploaded || ' KB up' AS "DAY_THREE_DATA",
-  day_four_totals.class || ' (' || day_four_totals.room || ')' AS "DAY_FOUR_TT",
+  day_four_totals.class AS "DAY_FOUR_TT",
   day_four_totals.day_4_downloaded || ' KB down, ' || day_four_totals.day_4_uploaded || ' KB up' AS "DAY_FOUR_DATA",
-  day_five_totals.class || ' (' || day_five_totals.room || ')' AS "DAY_FIVE_TT",
+  day_five_totals.class AS "DAY_FIVE_TT",
   day_five_totals.day_5_downloaded || ' KB down, ' || day_five_totals.day_5_uploaded || ' KB up' AS "DAY_FIVE_DATA",
-  day_six_totals.class || ' (' || day_six_totals.room || ')' AS "DAY_SIX_TT",
+  day_six_totals.class AS "DAY_SIX_TT",
   day_six_totals.day_6_downloaded || ' KB down, ' || day_six_totals.day_6_uploaded || ' KB up' AS "DAY_SIX_DATA",
-  day_seven_totals.class || ' (' || day_seven_totals.room || ')' AS "DAY_SEVEN_TT",
+  day_seven_totals.class AS "DAY_SEVEN_TT",
   day_seven_totals.day_7_downloaded || ' KB down, ' || day_seven_totals.day_7_uploaded || ' KB up' AS "DAY_SEVEN_DATA",
-  day_eight_totals.class || ' (' || day_eight_totals.room || ')' AS "DAY_EIGHT_TT",
+  day_eight_totals.class AS "DAY_EIGHT_TT",
   day_eight_totals.day_8_downloaded || ' KB down, ' || day_eight_totals.day_8_uploaded || ' KB up' AS "DAY_EIGHT_DATA",
-  day_nine_totals.class || ' (' || day_nine_totals.room || ')' AS "DAY_NINE_TT",
+  day_nine_totals.class AS "DAY_NINE_TT",
   day_nine_totals.day_9_downloaded || ' KB down, ' || day_nine_totals.day_9_uploaded || ' KB up' AS "DAY_NINE_DATA",
-  day_ten_totals.class || ' (' || day_ten_totals.room || ')' AS "DAY_TEN_TT",
+  day_ten_totals.class AS "DAY_TEN_TT",
   day_ten_totals.day_10_downloaded || ' KB down, ' || day_ten_totals.day_10_uploaded || ' KB up' AS "DAY_TEN_DATA"
 
 FROM day_one_totals
