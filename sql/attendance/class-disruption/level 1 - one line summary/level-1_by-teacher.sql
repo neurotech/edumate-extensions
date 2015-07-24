@@ -191,10 +191,13 @@ combined AS (
 
 SELECT * FROM (
   SELECT
+    sort_order,
+    -- Start Header
     (TO_CHAR((current date), 'DD Month, YYYY')) AS "GEN_DATE",
     (CHAR(TIME(current timestamp), USA)) AS "GEN_TIME",
     TO_CHAR((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY') || ' to ' || TO_CHAR((SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY')AS "REPORT_SCOPE",
-    sort_order,
+    (SELECT business_days_count FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) AS "WORKING_DAYS",
+    -- End Header
     UPPER(contact.surname)||', '||COALESCE(contact.preferred_name,contact.firstname) AS TEACHER_NAME,
     TO_CHAR(classes) AS CLASSES,
     size,

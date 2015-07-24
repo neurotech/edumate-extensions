@@ -154,7 +154,6 @@ all_classes_summary AS (
     AVG(size) AS SIZE,
     SUM(student_periods) AS STUDENT_PERIODS,
     AVG(max_periods) AS MAX_PERIODS,
-    
     SUM(absent) AS ABSENT,
     SUM(on_event) AS ON_EVENT,
     SUM(appointment) AS APPOINTMENT,
@@ -179,6 +178,28 @@ all_classes_summary AS (
   GROUP BY student_homeroom.homeroom, combined.student_id
 ),
 
+student_period_count_totals AS (
+  SELECT
+    combined.student_id,
+    SUM(student_periods) AS "UNIQUE_PERIOD_COUNTS"
+  
+  FROM combined
+  
+  GROUP BY combined.student_id
+),
+
+mode_periods AS (
+  SELECT
+    unique_period_counts,
+    COUNT(unique_period_counts) AS "COUNT_OF_SUM_PERIODS"
+  
+  FROM student_period_count_totals
+  
+  GROUP BY unique_period_counts
+  
+  ORDER BY COUNT(unique_period_counts) DESC
+),
+
 final_report AS (
   SELECT * FROM all_classes_summary
   UNION ALL
@@ -188,19 +209,27 @@ final_report AS (
 SELECT * FROM (
   SELECT
     sort_order,
+    -- Start Header
     (TO_CHAR((current date), 'DD Month, YYYY')) AS "GEN_DATE",
     (CHAR(TIME(current timestamp), USA)) AS "GEN_TIME",
     TO_CHAR((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY') || ' to ' || TO_CHAR((SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY),'DD Month YYYY')AS "REPORT_SCOPE",
+    (SELECT business_days_count FROM TABLE(DB2INST1.BUSINESS_DAYS_COUNT((SELECT report_start FROM raw_data FETCH FIRST 1 ROWS ONLY), (SELECT report_end FROM raw_data FETCH FIRST 1 ROWS ONLY)))) AS "WORKING_DAYS",
+    -- End Header
     UPPER(contact.surname)||', '||COALESCE(contact.preferred_name,contact.firstname) AS STUDENT_NAME,
+    form.short_name AS "FORM",
     (CASE WHEN homeroom IS null THEN ('*** Left: ' || TO_CHAR(gass.end_date, 'DD Mon, YYYY')) ELSE REPLACE(homeroom, ' Home Room ', ' ') END) AS HOMEROOM,
     classes,
     size,
     student_periods,
-    max_periods,
+    --max_periods,
+    (SELECT unique_period_counts FROM mode_periods ORDER BY count_of_sum_periods DESC FETCH FIRST 1 ROW ONLY) AS "MAX_PERIODS",
     on_event AS STUDENT_EVENT,
     appointment AS STUDENT_APPOINTMENT,
     absent AS STUDENT_ABSENT,
     TO_CHAR(student_total, '990') || (CASE WHEN student_total = 0 THEN '' ELSE ' (' || REPLACE(TO_CHAR((student_total / student_periods * 100), '990') || '%)', ' ', '') END) AS STUDENT_TOTAL,
+    (student_periods / 6) AS STUDENT_DAYS,
+    ((student_periods / 6) / 5) AS STUDENT_WEEKS,
+    -- Staff
     staff_event,
     staff_personal,
     staff_other,
@@ -213,6 +242,9 @@ SELECT * FROM (
   LEFT JOIN contact ON contact.contact_id = student.contact_id
   LEFT JOIN class ON class.class_id = final_report.class_id
   LEFT JOIN TABLE(EDUMATE.getallstudentstatus(current date)) gass ON gass.student_id = final_report.student_id
+
+  INNER JOIN view_student_form_run vsfr ON vsfr.student_id = final_report.student_id AND vsfr.academic_year = YEAR(current date)
+  INNER JOIN form ON form.form_id = vsfr.form_id
 
   ORDER BY UPPER(contact.surname), contact.preferred_name, contact.firstname, sort_order
 )
