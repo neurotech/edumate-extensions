@@ -54,6 +54,7 @@ WITH selected_period AS
             AND stud_task_raw_mark.task_id = task.task_id
     WHERE report_period_course.course_id is null
         AND task.mark_out_of > 0 AND task.weighting > 0
+        
     GROUP BY report_period.report_period_id, student.student_id, course.course_id
     ),
 
@@ -87,9 +88,12 @@ WITH selected_period AS
     (
     SELECT
         ordered_task_results.sort_order,
+        ordered_task_results.student_id,
+        ordered_task_results.course_id,
         department.department,
         subject.subject,
         COALESCE(course.course,course.print_name,course.course) AS COURSE,
+        course.print_name,
         course_rank AS RANK,
         (CASE
           WHEN course_rank = 1 THEN '**'
@@ -122,11 +126,11 @@ SELECT
   (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
   (SELECT print_name FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD_PRINT_NAME",
   department,
-  (CASE WHEN student_course_results.sort_order = 1 THEN course ELSE null END) AS "COURSE",
+  (CASE WHEN student_course_results.sort_order = 1 THEN course ELSE '' END) AS "COURSE",
   rank,
   aw,
   overall_mark,
-  (CASE WHEN student_course_results.sort_order = 1 THEN course_average ELSE null END) AS "COURSE_AVERAGE",
+  (CASE WHEN student_course_results.sort_order = 1 THEN CHAR(course_average) ELSE '' END) AS "COURSE_AVERAGE",
   all_average,
   name,
   yr,
@@ -135,4 +139,4 @@ SELECT
 
 FROM student_course_results
 
-ORDER BY department, subject, course, rank
+ORDER BY department, subject, student_course_results.course, rank
