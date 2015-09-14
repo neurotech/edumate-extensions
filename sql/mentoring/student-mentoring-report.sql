@@ -15,7 +15,8 @@ active_classes AS (
     teacher_contact.surname AS "TEACHER_SURNAME",
     student_contact.contact_id AS "STUDENT_CONTACT_ID",
     (CASE WHEN student_contact.preferred_name IS null THEN student_contact.firstname ELSE student_contact.preferred_name END) AS "STUDENT_FIRSTNAME",
-    student_contact.surname AS "STUDENT_SURNAME"
+    student_contact.surname AS "STUDENT_SURNAME",
+    form.short_name AS "YEAR_GROUP"
   
   FROM TABLE(edumate.get_active_ay_classes((SELECT ay FROM report_vars))) active
   
@@ -27,6 +28,15 @@ active_classes AS (
   INNER JOIN view_student_class_enrolment vsce ON vsce.class_id = active.class_id AND vsce.academic_year_id = (SELECT ay FROM report_vars)
   INNER JOIN student ON student.student_id = vsce.student_id
   INNER JOIN contact student_contact ON student_contact.contact_id = student.contact_id
+  INNER JOIN form_run ON form_run.form_run_id =
+    (
+      SELECT form_run.form_run_id
+      FROM TABLE(EDUMATE.get_enroled_students_form_run(current date)) grsfr
+      INNER JOIN form_run ON grsfr.form_run_id = form_run.form_run_id
+      WHERE grsfr.student_id = vsce.student_id
+      FETCH FIRST 1 ROW ONLY
+    )
+  INNER JOIN form ON form.form_id = form_run.form_id
    
   -- Teachers
   INNER JOIN class_teacher ON class_teacher.class_id = active.class_id
@@ -92,6 +102,7 @@ joined AS (
     ac.student_contact_id,
     ac.student_firstname,
     ac.student_surname,
+    ac.year_group,
     app.subject,
     TO_CHAR((DATE(app.start_date)), 'DD/MM/YY') AS "APP_START_DATE",
     CHAR(TIME(app.start_date),USA) AS "APP_START_TIME",
@@ -166,6 +177,7 @@ SELECT
   (CASE WHEN overall_sort = 1 THEN note_counts.no_notes ELSE null END) AS "NO_NOTES",
   (CASE WHEN student_sort = 1 THEN joined.student_firstname ELSE null END) AS "STUDENT_FIRSTNAME",
   (CASE WHEN student_sort = 1 THEN joined.student_surname ELSE null END) AS "STUDENT_SURNAME",
+  (CASE WHEN student_sort = 1 THEN joined.year_group ELSE null END) AS "STUDENT_YEAR_GROUP",
   LEFT(joined.subject, 9) || '...' AS "SUBJECT",
   joined.app_start_date AS "APP_DATE",
   joined.app_start_time,
