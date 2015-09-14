@@ -27,9 +27,9 @@ CASUALS_DATA AS (
   INNER JOIN STAFF_EMPLOYMENT SE ON SE.STAFF_ID = AC.STAFF_ID
 
   WHERE
-    (DATE(AC.FROM_DATE) >= (SELECT report_start FROM report_vars)
+    (DATE(AC.FROM_DATE) BETWEEN (SELECT report_start FROM report_vars) AND (SELECT report_end FROM report_vars)
     OR
-    DATE(AC.FROM_DATE) <= (SELECT report_start FROM report_vars))
+    (SELECT report_start FROM report_vars) BETWEEN DATE(AC.FROM_DATE) AND DATE(AC.TO_DATE))
     AND
     DATE(AC.TO_DATE) >= (SELECT report_start FROM report_vars) 
 )
