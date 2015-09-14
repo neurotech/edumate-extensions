@@ -1,6 +1,13 @@
-WITH raw_data AS (
-  --SELECT * FROM TABLE(DB2INST1.get_class_disruptions((current date - 11 days), (current date)))
-  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-01-26'), DATE('2015-04-03')))
+WITH report_vars AS (
+  SELECT
+    ('[[Reporting From=date]]') AS REPORT_START,
+    ('[[Reporting To=date]]') AS REPORT_END 
+    
+  FROM SYSIBM.sysdummy1
+),
+
+raw_data AS (
+  SELECT * FROM TABLE(DB2INST1.get_class_disruptions((SELECT report_start FROM report_vars), (SELECT report_end FROM report_vars)))
 ),
 
 student_homeroom AS (
@@ -231,8 +238,8 @@ SELECT * FROM (
     ((student_periods / 6) / 5) AS STUDENT_WEEKS,
     -- Staff
     staff_event,
-    staff_personal,
     staff_other,
+    staff_personal,
     TO_CHAR(staff_total, '990') || (CASE WHEN staff_total = 0 THEN '' ELSE ' (' || REPLACE(TO_CHAR((staff_total / teacher_periods * 100), '990') || '%)', ' ', '') END)  AS STAFF_TOTAL,
     TO_CHAR(teaching_time, '990') || '%' AS TEACHING_TIME
     
