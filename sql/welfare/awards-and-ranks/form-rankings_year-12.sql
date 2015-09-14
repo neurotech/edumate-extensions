@@ -11,11 +11,9 @@ WITH course_units(unit_number) AS
 
     selected_period AS
     (
-    SELECT
-        report_period_id
+    SELECT report_period_id
     FROM report_period
-    WHERE --report_period.report_period = '2014 Year 11 Ranking'
-          report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE LOWER(report_period) LIKE '%ranking%' AND end_date >= current_date - 2 YEARS AND start_date <= current_date)]]'
+    WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE LOWER(report_period) LIKE '%ranking%' AND end_date >= current_date - 2 YEARS AND start_date <= current_date)]]'
     ),
 
     student_form AS
@@ -157,9 +155,9 @@ WITH course_units(unit_number) AS
         
     FROM course_rankings
     
-    INNER JOIN included_students ON included_students.student_id = course_rankings.student_id
+    LEFT JOIN included_students ON included_students.student_id = course_rankings.student_id
     INNER JOIN sdmean ON sdmean.course_id = course_rankings.course_id
-    
+
     WHERE qualifying_units BETWEEN 10 and 14
     ),
 
@@ -245,7 +243,7 @@ WITH course_units(unit_number) AS
         SUM(CASE WHEN course_rank = 2 THEN 1 ELSE 0 END) AS SECONDS,
         SUM(CASE WHEN course_rank = 3 THEN 1 ELSE 0 END) AS THIRDS,
         total_units,
-        LISTAGG('[' || course_rank || CASE WHEN best_units = 0 THEN '*' ELSE '' END || '] ' || COALESCE(course.print_name,course.course),', ') WITHIN GROUP(ORDER BY core_or_elective DESC, best_units DESC, course_rank) AS RANKING_DETAILS,
+        LISTAGG('[' || course_rank || CASE WHEN best_units = 0 THEN '*' ELSE '' END || '] ' || COALESCE(course.print_name,course.course) || ' (' || course_final_mark.weight || ')',', ') WITHIN GROUP(ORDER BY core_or_elective DESC, best_units DESC, course_rank) AS RANKING_DETAILS,
         SUM(FLOAT(course_rank)*COALESCE(course_final_mark.weight,1)*units) / SUM(COALESCE(course_final_mark.weight,1)*units) AS OVERALL_WEIGHTED_RANK,
         SUM(FLOAT(final_mark)*COALESCE(course_final_mark.weight,1)*units) / SUM(COALESCE(course_final_mark.weight,1)*units) AS OVERALL_WEIGHTED_MARK,
         SUM(FLOAT(final_scaled_mark)*COALESCE(course_final_mark.weight,1)*units) / SUM(COALESCE(course_final_mark.weight,1)*units) AS OVERALL_WEIGHTED_SCALED_MARK,
@@ -274,6 +272,7 @@ WITH course_units(unit_number) AS
           WHEN RANK() OVER (ORDER BY best_weighted_rank ASC) <= FLOAT(COUNT(student.student_id) OVER (PARTITION BY 1)) * 15 / 100 + 0.5 AND RANK() OVER (ORDER BY best_weighted_rank ASC) <= 10 THEN '*'
           ELSE ''
         END) AS AW,
+        best_courses.STUDENT_ID,
         student_number AS STUDENT,
         student_form.form AS FORM,
         (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
@@ -295,5 +294,4 @@ WITH course_units(unit_number) AS
     LEFT JOIN student_form ON student_form.student_id = student.student_id
     )
 
-SELECT * FROM raw_report
-ORDER BY pos
+SELECT * FROM raw_report ORDER BY pos
