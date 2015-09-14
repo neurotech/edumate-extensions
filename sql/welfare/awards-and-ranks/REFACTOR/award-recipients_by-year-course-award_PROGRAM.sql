@@ -1,8 +1,9 @@
 WITH report_vars AS (
   SELECT
-    ('[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]') AS "REPORT_PERIOD",
-    ('[[Reporting From=date]]') AS "REPORT_START",
-    ('[[Reporting To=date]]') AS "REPORT_END"
+     ('[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]') AS "REPORT_PERIOD",
+     ('[[Reporting From=date]]') AS "REPORT_START",
+     ('[[Reporting To=date]]') AS "REPORT_END"
+
 
   FROM SYSIBM.sysdummy1
 ),
@@ -29,9 +30,7 @@ award_winners AS (
   WHERE
     student_welfare.student_id IN (SELECT student_id FROM report_period_students)
     AND
-    (student_welfare.date_entered >= (SELECT report_start FROM report_vars)
-    OR
-    student_welfare.date_entered <= (SELECT report_end FROM report_vars) )
+    student_welfare.date_entered BETWEEN (SELECT report_start FROM report_vars) AND (SELECT report_end FROM report_vars)
     AND
     /*
       WHAT_HAPPENED_ID  |  WHAT_HAPPENED

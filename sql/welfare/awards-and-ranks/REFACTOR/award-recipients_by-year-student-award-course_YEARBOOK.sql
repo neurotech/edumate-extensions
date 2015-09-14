@@ -29,9 +29,7 @@ award_winners AS (
   WHERE
     student_welfare.student_id IN (SELECT student_id FROM report_period_students)
     AND
-    (student_welfare.date_entered >= (SELECT report_start FROM report_vars)
-    OR
-    student_welfare.date_entered <= (SELECT report_end FROM report_vars) )
+    student_welfare.date_entered BETWEEN (SELECT report_start FROM report_vars) AND (SELECT report_end FROM report_vars)
     AND
     /*
       WHAT_HAPPENED_ID  |  WHAT_HAPPENED
