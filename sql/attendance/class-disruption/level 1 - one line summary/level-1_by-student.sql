@@ -1,7 +1,7 @@
 WITH report_vars AS (
   SELECT
     ('[[Reporting From=date]]') AS REPORT_START,
-    ('[[Reporting To=date]]') AS REPORT_END 
+    ('[[Reporting To=date]]') AS REPORT_END
     
   FROM SYSIBM.sysdummy1
 ),
@@ -233,14 +233,16 @@ SELECT * FROM (
     on_event AS STUDENT_EVENT,
     appointment AS STUDENT_APPOINTMENT,
     absent AS STUDENT_ABSENT,
-    TO_CHAR(student_total, '990') || (CASE WHEN student_total = 0 THEN '' ELSE ' (' || REPLACE(TO_CHAR((student_total / student_periods * 100), '990') || '%)', ' ', '') END) AS STUDENT_TOTAL,
-    (student_periods / 6) AS STUDENT_DAYS,
-    ((student_periods / 6) / 5) AS STUDENT_WEEKS,
+    TO_CHAR(student_total, '990') AS STUDENT_TOTAL,
+    TO_CHAR((student_total / student_periods * 100), '990') || '%' AS STUDENT_TOTAL_PERCENT,
+    TO_CHAR((student_total / 6), '990.00') AS STUDENT_DAYS,
+    TO_CHAR(((student_total / 6) / 5), '990.00') AS STUDENT_WEEKS,
     -- Staff
     staff_event,
     staff_other,
     staff_personal,
-    TO_CHAR(staff_total, '990') || (CASE WHEN staff_total = 0 THEN '' ELSE ' (' || REPLACE(TO_CHAR((staff_total / teacher_periods * 100), '990') || '%)', ' ', '') END)  AS STAFF_TOTAL,
+    TO_CHAR(staff_total, '990') AS STAFF_TOTAL,
+    TO_CHAR((staff_total / teacher_periods * 100), '990') || '%' AS STAFF_TOTAL_PERCENT,
     TO_CHAR(teaching_time, '990') || '%' AS TEACHING_TIME
     
   FROM final_report
