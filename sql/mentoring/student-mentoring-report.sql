@@ -169,6 +169,7 @@ grand_totals AS (
 )
 
 SELECT
+  overall_sort,
   (CASE WHEN overall_sort = 1 THEN joined.teacher_firstname ELSE null END) AS "TEACHER_FIRSTNAME",
   (CASE WHEN overall_sort = 1 THEN joined.teacher_surname ELSE null END) AS "TEACHER_SURNAME",
   (CASE WHEN overall_sort = 1 THEN joined.class ELSE null END) AS "CLASS",
@@ -201,4 +202,4 @@ FROM joined
 LEFT JOIN appointment_counts ON appointment_counts.teacher_contact_id = joined.teacher_contact_id
 LEFT JOIN note_counts ON note_counts.teacher_contact_id = joined.teacher_contact_id
 CROSS JOIN grand_totals
-ORDER BY joined.teacher_surname
+ORDER BY joined.class, UPPER(joined.teacher_surname)
