@@ -1,6 +1,13 @@
-WITH raw_data AS (
-  --SELECT * FROM TABLE(DB2INST1.get_class_disruptions((current date - 11 days), (current date)))
-  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-01-26'), DATE('2015-04-03')))
+WITH report_vars AS (
+  SELECT
+    (SELECT start_date FROM term WHERE term = 'Term 1' AND YEAR(start_date) = YEAR(current date) AND timetable_id = (SELECT timetable_id FROM timetable WHERE default_flag = 1 AND academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(current date)))) AS "REPORT_START",
+    '[[To=date]]' AS "REPORT_END"
+    
+  FROM SYSIBM.sysdummy1
+),
+
+raw_data AS (
+  SELECT * FROM TABLE(DB2INST1.get_class_disruptions((SELECT report_start FROM report_vars), (SELECT report_end FROM report_vars)))
 ),
 
 teacher_period_counts AS (

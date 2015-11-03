@@ -1,7 +1,7 @@
 WITH report_vars AS (
   SELECT
-    ('[[Reporting From=date]]') AS REPORT_START,
-    ('[[Reporting To=date]]') AS REPORT_END
+    (SELECT start_date FROM term WHERE term = 'Term 1' AND YEAR(start_date) = YEAR(current date) AND timetable_id = (SELECT timetable_id FROM timetable WHERE default_flag = 1 AND academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(current date)))) AS "REPORT_START",
+    '[[To=date]]' AS "REPORT_END"
     
   FROM SYSIBM.sysdummy1
 ),
@@ -13,7 +13,7 @@ raw_data AS (
 student_homeroom AS (
   SELECT vsce.student_id, vsce.class AS HOMEROOM, ROW_NUMBER() OVER (PARTITION BY vsce.student_id ORDER BY vsce.end_date DESC, vsce.start_date DESC) AS ROW_NUM
   FROM view_student_class_enrolment vsce
-  WHERE vsce.class_type_id = 2 AND current_date BETWEEN vsce.start_date AND vsce.end_date
+  WHERE vsce.class_type_id = 2 AND (SELECT report_end FROM report_vars) BETWEEN vsce.start_date AND vsce.end_date
 ),
 
 student_period_counts AS (

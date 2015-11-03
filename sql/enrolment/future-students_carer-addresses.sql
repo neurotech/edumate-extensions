@@ -47,9 +47,9 @@ SELECT DISTINCT
   (CASE WHEN vcpa.address1 IS NULL THEN vcha.address1 ELSE vcpa.address1 END) ||
   (CASE
     WHEN vcpa.address1 IS NULL THEN
-      (CASE WHEN vcha.address1 = '' THEN '' ELSE '/' END) || vcha.address2
+      (CASE WHEN vcha.address1 = '' THEN '' ELSE (CASE WHEN vcha.address1 LIKE '%PO Box%' THEN '' ELSE '/' END) END) || vcha.address2
     ELSE
-      (CASE WHEN vcpa.address1 = '' THEN '' ELSE '' END) || vcpa.address2
+      (CASE WHEN vcpa.address1 = '' THEN '' ELSE (CASE WHEN vcpa.address1 LIKE '%PO Box%' THEN '' ELSE '/' END) END) || vcpa.address2
   END) AS "ADDRESS1",
   
   (CASE

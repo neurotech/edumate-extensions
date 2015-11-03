@@ -1,13 +1,21 @@
-WITH raw_data AS (
-  --SELECT * FROM TABLE(DB2INST1.get_class_disruptions((current date - 11 days), (current date)))
-  SELECT * FROM TABLE(DB2INST1.get_class_disruptions(DATE('2015-01-26'), DATE('2015-04-03')))
-  WHERE class LIKE '[[Class=query_list(SELECT DISTINCT class FROM view_student_class_enrolment WHERE academic_year = YEAR(current date) AND class_type_id IN (1,9,1124) ORDER BY class)]]'
+WITH report_vars AS (
+  SELECT
+    '[[From=date]]' AS "REPORT_START",
+    '[[To=date]]' AS "REPORT_END",
+    '[[Class=query_list(SELECT DISTINCT class FROM view_student_class_enrolment WHERE academic_year = YEAR(current date) AND class_type_id IN (1,9,1124) ORDER BY class)]]' AS "REPORT_CLASS"
+    
+  FROM SYSIBM.sysdummy1
+),
+
+raw_data AS (
+  SELECT * FROM TABLE(DB2INST1.get_class_disruptions((SELECT report_start FROM report_vars), (SELECT report_end FROM report_vars)))
+  WHERE class LIKE (SELECT report_class FROM report_vars)
 ),
 
 student_homeroom AS (
   SELECT vsce.student_id, vsce.class AS HOMEROOM, ROW_NUMBER() OVER (PARTITION BY vsce.student_id ORDER BY vsce.end_date DESC, vsce.start_date DESC) AS ROW_NUM
   FROM view_student_class_enrolment vsce
-  WHERE vsce.class_type_id = 2 AND current_date BETWEEN vsce.start_date AND vsce.end_date
+  WHERE vsce.class_type_id = 2 AND (SELECT report_end FROM report_vars) BETWEEN vsce.start_date AND vsce.end_date
 ),
 
 teacher_periods AS (

@@ -62,7 +62,7 @@ student_homeroom AS (
   
   FROM view_student_class_enrolment vsce
   
-  WHERE vsce.class_type_id = 2 AND current_date BETWEEN vsce.start_date AND vsce.end_date
+  WHERE vsce.class_type_id = 2 AND (SELECT report_end FROM report_vars) BETWEEN vsce.start_date AND vsce.end_date
 ),
 
 student_form AS (
@@ -76,7 +76,7 @@ student_form AS (
   INNER JOIN form_run ON form_run.form_run_id = student_form_run.form_run_id
   INNER JOIN form ON form.form_id = form_run.form_id
   
-  WHERE current_date BETWEEN student_form_run.start_date AND student_form_run.end_date
+  WHERE (SELECT report_end FROM report_vars) BETWEEN student_form_run.start_date AND student_form_run.end_date
 ),
 
 students_on_event AS (

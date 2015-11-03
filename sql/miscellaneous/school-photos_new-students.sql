@@ -1,5 +1,8 @@
 WITH report_vars AS (
-  SELECT ('[[Started on or after=date]]') AS "START_DATE"
+  SELECT
+    ('[[Between start=date]]') AS "START_DATE",
+    ('[[and start=date]]') AS "END_DATE"
+
   FROM SYSIBM.sysdummy1
 )
 
@@ -19,6 +22,6 @@ INNER JOIN student ON student.student_id = gass.student_id
 INNER JOIN contact ON contact.contact_id = student.contact_id
 LEFT JOIN view_student_class_enrolment vsce ON vsce.student_id = gass.student_id AND vsce.class_type_id = 2 AND vsce.start_date <= (current date) AND vsce.end_date > (current date)
 
-WHERE gass.student_status_id = 5 AND gass.start_date >= (SELECT start_date FROM report_vars)
+WHERE gass.start_date BETWEEN (SELECT start_date FROM report_vars) AND (SELECT end_date FROM report_vars)
 
 ORDER BY contact.surname, contact.preferred_name, contact.firstname
