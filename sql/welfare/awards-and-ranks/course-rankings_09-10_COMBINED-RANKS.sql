@@ -1,4 +1,11 @@
-WITH selected_period AS
+WITH report_vars AS (
+  SELECT
+    '[[Due date=date]]' AS "DUE_DATE"
+    
+  FROM SYSIBM.sysdummy1
+),
+
+selected_period AS
     (
     SELECT report_period_id
     FROM report_period
@@ -148,6 +155,7 @@ WITH selected_period AS
     )
 
 SELECT
+  (SELECT TO_CHAR(due_date, 'DD Month YYYY') FROM report_vars) AS "DUE_DATE",
   (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
   (SELECT print_name FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD_PRINT_NAME",
   department,
