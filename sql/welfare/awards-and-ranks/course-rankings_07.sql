@@ -69,7 +69,7 @@ selected_period AS
     SELECT
         RANK() OVER (PARTITION BY course.course_id ORDER BY raw_course_results.final_mark DESC) AS sort_order,
         raw_course_results.student_id,
-        course.course_id,      
+        course.course_id,
         course.units,
         SUM(units) OVER (PARTITION BY raw_course_results.student_id ORDER BY final_mark DESC) AS RANKED_UNITS,
         raw_course_results.final_mark,
@@ -120,6 +120,7 @@ selected_period AS
         student.student_number,
         CASE WHEN ordered_task_results.ranked_units <= 10 THEN 'Yes' WHEN ordered_task_results.ranked_units = 11 AND ordered_task_results.units = 2 THEN 'Yes' ELSE 'No' END AS IN_TOP10UNITS
     FROM ordered_task_results
+
         INNER JOIN course ON course.course_id = ordered_task_results.course_id
         INNER JOIN student ON student.student_id = ordered_task_results.student_id
         INNER JOIN contact ON contact.contact_id = student.contact_id
@@ -138,7 +139,7 @@ SELECT
   rank,
   aw,
   overall_mark,
-  (CASE WHEN student_course_results.sort_order = 1 THEN course_average ELSE null END) AS "COURSE_AVERAGE",
+  (CASE WHEN student_course_results.sort_order = 1 THEN CHAR(course_average) ELSE '' END) AS "COURSE_AVERAGE",
   all_average,
   name,
   yr,
@@ -147,4 +148,4 @@ SELECT
 
 FROM student_course_results
 
-ORDER BY department, subject, course, rank
+ORDER BY department, subject, course, student_course_results.sort_order, rank
