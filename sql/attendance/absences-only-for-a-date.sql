@@ -1,10 +1,10 @@
 WITH report_vars AS (
---  SELECT (date('[[Start date=date]]')) as "REPORT_DATE"
-  SELECT (date('2015-05-22')) as "REPORT_DATE"
+  SELECT (date('[[Start date=date]]')) as "REPORT_DATE"
   FROM SYSIBM.SYSDUMMY1
 )
 
 SELECT
+  TO_CHAR((current date), 'DD Month YYYY') || ' at ' || CHAR(TIME(current timestamp),USA) AS "PRINTED",
   (SELECT TO_CHAR((report_date), 'DD Month, YYYY') FROM report_vars) AS "REPORT_DATE",
   form_run.form_run,
   student.student_number AS "LOOKUP_CODE",
