@@ -1,12 +1,19 @@
 WITH report_vars AS (
-  SELECT '[[Due date=date]]' AS "DUE_DATE"
+  --SELECT '[[Due date=date]]' AS "DUE_DATE"
+  SELECT (current date) AS "DUE_DATE"
   FROM SYSIBM.sysdummy1
 ),
 
 selected_period AS (
   SELECT report_period_id
   FROM report_period
-  WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]'
+  --WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]'
+  
+  WHERE report_period.report_period = '2015 Year 07 Ranking'
+  --WHERE report_period.report_period = '2015 Year 08 Ranking'
+  --WHERE report_period.report_period = '2015 Year 09 Ranking'
+  --WHERE report_period.report_period = '2015 Year 10 Ranking'
+  --WHERE report_period.report_period = '2015 Year 11 Ranking'
 ),
 
 student_form AS (
@@ -50,7 +57,7 @@ raw_course_results AS (
     AND view_student_class_enrolment.start_date <= timetable.computed_end_date
     AND view_student_class_enrolment.end_date >= timetable.computed_start_date
     AND view_student_class_enrolment.academic_year_id = academic_year.academic_year_id
-    AND report_period.end_date BETWEEN view_student_class_enrolment.start_date AND view_student_class_enrolment.end_date
+--    AND report_period.end_date BETWEEN view_student_class_enrolment.start_date AND view_student_class_enrolment.end_date
   INNER JOIN course ON course.course_id = view_student_class_enrolment.course_id
   LEFT JOIN report_period_course ON report_period_course.course_id = course.course_id
     AND report_period_course.report_period_id = report_period.report_period_id
@@ -70,6 +77,9 @@ raw_course_results AS (
     task.mark_out_of > 0
     AND
     task.weighting > 0
+/*     AND
+    stud_task_raw_mark.raw_mark IS NOT null */
+    
 
   GROUP BY report_period.report_period_id, student.student_id, course.course_id
 ),
@@ -142,7 +152,8 @@ ordered_task_results AS (
     AND course_final_mark.report_period_id = raw_course_results.report_period_id
 
   -- Must have results for 2/3rd of the tasks
-  WHERE raw_course_results.total_results  >= FLOAT(raw_course_results.total_tasks)*0.666
+  --WHERE raw_course_results.total_results >= FLOAT(raw_course_results.total_tasks)*0.666
+  WHERE raw_course_results.total_results > 0
 ),
 
 student_course_results AS (
@@ -168,6 +179,7 @@ SELECT
     WHEN FLOAT(students) > 181 THEN (CASE WHEN course_rank <= 10 THEN '*' ELSE '' END)
     ELSE ''
   END) AS "AW",
+  float(students) AS "NUM_STUDENTS",
   TO_CHAR(ordered_task_results.final_mark,'999') AS "OVERALL_MARK",
   CAST(ROUND(course_average,2) AS DECIMAL(5,2)) AS "COURSE_AVERAGE",
   CAST(ROUND(all_average,2) AS DECIMAL(5,2)) AS "ALL_AVERAGE",
@@ -191,9 +203,9 @@ SELECT
   INNER JOIN department ON department.department_id = subject.department_id
 )
 
--- SELECT * FROM raw_course_results WHERE student_id = 30043
--- SELECT * FROM ordered_task_results WHERE student_id = 30043
--- SELECT * FROM student_course_results WHERE department = 'Languages'
+--SELECT * FROM raw_course_results WHERE student_id = 33190 AND course_id = 134
+--SELECT * FROM ordered_task_results WHERE student_id = 33190 AND course_id = 134
+--SELECT * FROM student_course_results WHERE student_id = 33190 AND course_id = 134 
 
 SELECT
   student_course_results.sort_order,
@@ -202,10 +214,11 @@ SELECT
   (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
   (SELECT print_name FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD_PRINT_NAME",
   department,
-  REPLACE(course, '&amp;', '&') AS "COURSE", 
-  student_classes_aggregate.classes AS "CLASS", 
+  REPLACE(course, '&amp;', '&') AS "COURSE",
+  student_classes_aggregate.classes AS "CLASS",
   rank,
   aw,
+  num_students,
   overall_mark,
   student_number,
   name,
@@ -220,4 +233,6 @@ FROM student_course_results
 
 LEFT JOIN student_classes_aggregate ON student_classes_aggregate.student_id = student_course_results.student_id AND student_classes_aggregate.course_id = student_course_results.course_id
 
-ORDER BY department, subject, student_course_results.course, student_course_results.sort_order, rank
+WHERE aw IN ('**','*')
+
+ORDER BY department, subject, student_course_results.course, sort_order, rank

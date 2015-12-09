@@ -1,16 +1,15 @@
 WITH report_vars AS (
-  SELECT
-    '[[Due date=date]]' AS "DUE_DATE"
-    
+  --SELECT '[[Due date=date]]' AS "DUE_DATE"
+  SELECT (current date) AS "DUE_DATE"
   FROM SYSIBM.sysdummy1
 ),
 
-selected_period AS
-    (
-    SELECT report_period_id
-    FROM report_period
-    WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]'
-    ),
+selected_period AS (
+  SELECT report_period_id
+  FROM report_period
+  --WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]'
+  WHERE report_period.report_period = '2015 Year 09/10 Vertical Electives Only'
+),
 
     student_form AS
     (
@@ -35,6 +34,7 @@ selected_period AS
           -- Random electives
           WHEN course.course IN ('09 French', '10 French') THEN '09/10 French'
           WHEN course.course IN ('09 Italian', '10 Italian') THEN '09/10 Italian'
+          WHEN course.course IN ('09 Mandarin', '10 Mandarin'0 THEN '09/10 Mandarin'
           WHEN course.course IN ('09 Commerce', '10 Commerce') THEN '09/10 Commerce'
           WHEN course.course IN ('09 Physical Activity and Sports Science', '10 Physical Activity and Sports Science') THEN '09/10 Physical Activity and Sports Science'
           WHEN course.course IN ('09 iThink', '10 iThink') THEN '09/10 iThink'
@@ -111,7 +111,8 @@ selected_period AS
         LEFT JOIN course_final_mark ON course_final_mark.course_id = course.course_id
             AND course_final_mark.report_period_id = raw_course_results.report_period_id
     -- Must have results for 2/3rd of the tasks
-    WHERE raw_course_results.total_results  >= FLOAT(raw_course_results.total_tasks)*0.666
+    --WHERE raw_course_results.total_results  >= FLOAT(raw_course_results.total_tasks)*0.666
+    WHERE raw_course_results.total_results > 0
     ),
 
     student_course_results AS
@@ -154,6 +155,8 @@ selected_period AS
         INNER JOIN department ON department.department_id = subject.department_id
     )
 
+--SELECT * FROM raw_course_results WHERE student_id = 30484
+
 SELECT
   (SELECT TO_CHAR(due_date, 'DD Month YYYY') FROM report_vars) AS "DUE_DATE",
   (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
@@ -171,5 +174,7 @@ SELECT
   in_top10units
 
 FROM student_course_results
+
+WHERE aw IN ('**','*')
 
 ORDER BY department, student_course_results.course, rank

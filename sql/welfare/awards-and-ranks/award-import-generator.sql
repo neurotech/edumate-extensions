@@ -11,7 +11,7 @@ selected_period AS
     SELECT report_period_id
     FROM report_period
     --WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]'
-    WHERE report_period.report_period = '2015 Year 11 Ranking'
+    WHERE report_period.report_period = '2015 Year 09/10 Combined Ranking'
     ),
 
 
@@ -36,6 +36,7 @@ selected_period AS
         student.student_id,
         course.course_id,
         view_student_class_enrolment.class_id,
+        view_student_class_enrolment.end_date,
         CAST(ROUND(SUM(FLOAT(stud_task_raw_mark.raw_mark) / FLOAT(task.mark_out_of) * FLOAT(task.weighting) * (CASE WHEN course.units = 1 THEN 50 ELSE 100 END)) / SUM(task.weighting),3) AS DECIMAL(6,3)) AS FINAL_MARK,
         COUNT(coursework_task.coursework_task_id) AS TOTAL_TASKS,
         COUNT(stud_task_raw_mark.raw_mark) AS TOTAL_RESULTS
@@ -70,8 +71,8 @@ selected_period AS
     WHERE report_period_course.course_id is null
         AND task.mark_out_of > 0 AND task.weighting > 0
         AND gass.student_status_id = 5
-
-    GROUP BY report_period.report_period_id, student.student_id, course.course_id, view_student_class_enrolment.class_id
+        AND stud_task_raw_mark.raw_mark IS NOT null
+    GROUP BY report_period.report_period_id, student.student_id, course.course_id, view_student_class_enrolment.class_id, view_student_class_enrolment.end_date
     ),
 
     sdmean AS (
@@ -104,6 +105,7 @@ selected_period AS
         raw_course_results.student_id,
         course.course_id,
         raw_course_results.class_id,
+        raw_course_results.end_date,
         course.units,
         SUM(units) OVER (PARTITION BY raw_course_results.student_id ORDER BY final_mark DESC) AS RANKED_UNITS,
         raw_course_results.final_mark,
@@ -125,7 +127,8 @@ selected_period AS
         LEFT JOIN course_final_mark ON course_final_mark.course_id = course.course_id
             AND course_final_mark.report_period_id = raw_course_results.report_period_id
     -- Must have results for 2/3rd of the tasks
-    WHERE raw_course_results.total_results  >= FLOAT(raw_course_results.total_tasks)*0.666
+    --WHERE raw_course_results.total_results  >= FLOAT(raw_course_results.total_tasks)*0.666
+    WHERE raw_course_results.total_results > 0
     ),
 
     student_course_results AS
@@ -136,6 +139,7 @@ selected_period AS
         subject.subject,
         COALESCE(course.course,course.print_name,course.course) AS COURSE,
         class.class,
+        ordered_task_results.end_date,
         course_rank AS RANK,
         (CASE
           WHEN course_rank = 1 THEN '**'
@@ -181,6 +185,9 @@ SELECT
   (CASE WHEN aw = '**' THEN 'Academic Excellence' WHEN aw = '*' THEN 'Academic Merit' END) AS "award",
   (CASE WHEN aw = '**' THEN 'Academic Excellence' WHEN aw = '*' THEN 'Academic Merit' END) AS "what_happened",
   REPLACE(student_course_results.class, '&amp;', '&') AS "class",
+  --
+  -- --student_course_results.end_date,
+  --
   0 AS "points",
   '' as "refer_form",
   '' as "refer_house",
@@ -190,6 +197,6 @@ SELECT
 
 FROM student_course_results
 
-WHERE student_course_results.aw != ''
+WHERE student_course_results.aw != '' AND class LIKE '09 %'
 
-ORDER BY student_course_results.department, student_course_results.subject, student_course_results.course, student_course_results.rank
+ORDER BY student_course_results.student_number, class
