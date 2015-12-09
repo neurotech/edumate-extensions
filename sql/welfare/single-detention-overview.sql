@@ -1,9 +1,7 @@
 WITH report_vars AS (
   SELECT
-    (current date - 3 days) AS "REPORT_DATE",
-    'Monday Detention' AS "REPORT_CLASS"
-    --(current date) AS "REPORT_DATE",
-    --('[[Detention Type=query_list(SELECT class FROM class WHERE class_type_id = 6 AND academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(current date)))]]') AS "REPORT_CLASS"
+    (current date) AS "REPORT_DATE",
+    ('[[Detention Type=query_list(SELECT class FROM class WHERE class_type_id = 6 AND academic_year_id = (SELECT academic_year_id FROM academic_year WHERE academic_year = YEAR(current date)))]]') AS "REPORT_CLASS"
   
   FROM SYSIBM.sysdummy1
 ),
@@ -57,7 +55,7 @@ detention_attendance AS (
 
 SELECT
   -- Header
-  td.class || ' - ' || TO_CHAR((current date), 'DD Month YYYY') AS "CLASS",
+  td.class || ' - ' || TO_CHAR((SELECT report_date FROM report_vars), 'DD Month YYYY') AS "CLASS",
   'Generated on ' || TO_CHAR((current date), 'DD Month YYYY') || ' at ' || CHAR(TIME(current timestamp), USA) AS "GENERATED",
   -- Header
   COALESCE(student_contact.preferred_name, student_contact.firstname) || ' ' || UPPER(student_contact.surname) AS "STUDENT",
