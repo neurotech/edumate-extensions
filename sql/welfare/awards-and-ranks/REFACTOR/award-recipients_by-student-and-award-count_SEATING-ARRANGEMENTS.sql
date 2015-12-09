@@ -3,7 +3,7 @@ WITH report_vars AS (
     ('[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]') AS "REPORT_PERIOD",
     ('[[Reporting From=date]]') AS "REPORT_START",
     ('[[Reporting To=date]]') AS "REPORT_END"
-    
+
   FROM SYSIBM.sysdummy1
 ),
 
@@ -17,6 +17,7 @@ award_winners AS (
     student_welfare.student_id,
     (CASE
       WHEN wh.what_happened IN ('Good Samaritan Award', 'Leadership and Service Award') THEN wh.what_happened
+      WHEN wh.what_happened = 'House Award' THEN REPLACE(course.course, 'Home Room', '') || wh.what_happened
       ELSE wh.what_happened || ' in ' || course.print_name
     END) AS "AWARD",
     course.print_name AS "COURSE"

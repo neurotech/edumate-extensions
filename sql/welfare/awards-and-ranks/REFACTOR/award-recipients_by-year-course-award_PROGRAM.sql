@@ -19,7 +19,7 @@ award_winners AS (
     wh.what_happened_id,
     course.course_id,
     wh.what_happened AS "AWARD",
-    (CASE WHEN course.print_name = 'Home Room' THEN null ELSE course.print_name END) AS "COURSE"
+    (CASE WHEN course.print_name = 'Home Room' THEN REPLACE(course.course, 'Home Room', '') ELSE course.print_name END) AS "COURSE"
     
   FROM student_welfare
   

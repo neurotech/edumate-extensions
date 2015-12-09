@@ -17,6 +17,7 @@ award_winners AS (
     student_welfare.student_id,
     (CASE
       WHEN wh.what_happened IN ('Good Samaritan Award', 'Leadership and Service Award') THEN wh.what_happened
+      WHEN wh.what_happened = 'House Award' THEN REPLACE(course.course, 'Home Room', '') || wh.what_happened
       ELSE wh.what_happened || ' in ' || course.print_name
     END) AS "AWARD",
     course.print_name AS "COURSE"
@@ -54,10 +55,8 @@ award_winners AS (
       ------------------|---------------------------------------------------
       169               |  Good Samaritan Award
       170               |  Leadership and Service Award
+      193               |  House Award
     */
-    --student_welfare.what_happened_id IN (154, 155, 156)
-    --student_welfare.what_happened_id in (145, 146, 147, 148, 149, 150, 151, 152, 153)
-    --student_welfare.what_happened_id in (145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156)
     student_welfare.what_happened_id in (145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 169, 170, 193)
 ),
 
