@@ -2,7 +2,7 @@ WITH report_vars AS (
   SELECT   
     '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY end_date DESC, report_period)]]' AS "REPORT_PERIOD",
     '[[Award Type=query_list(SELECT what_happened FROM what_happened WHERE what_happened_id IN (154,155,156,147,169,170,193) ORDER BY what_happened)]]' AS "REPORT_AWARD_TYPE",
-    '[[Display Date=date]]' AS "REPORT_DATE"
+    '[[Display Date=date]]' AS "REPORT_DATE"    
 
   FROM sysibm.sysdummy1
 ),
@@ -49,9 +49,11 @@ SELECT
     (SELECT end_date FROM report_period WHERE report_period = (SELECT report_period FROM report_vars))
   )) FETCH FIRST 1 ROW ONLY) AS "FORM_RUN",
   what_happened.what_happened,
+  (CASE WHEN what_happened.what_happened = 'Good Samaritan Award' THEN '' ELSE 'in' END) AS "IN",
   (CASE
     WHEN course.print_name = 'Industrial Technology (Timber Products and Furniture Technologies)' THEN 'Industrial Technology<br>(Timber Products and Furniture Technologies)'
     WHEN what_happened.what_happened = 'House Award' THEN REPLACE(REPLACE(class.class, ' Home Room ', ''), RIGHT(REPLACE(class.class, ' Home Room ', ''), 3), '') || ' House'
+    WHEN what_happened.what_happened = 'Good Samaritan Award' THEN ''
     ELSE course.print_name
   END) AS "COURSE",
   TO_CHAR((SELECT report_date FROM report_vars), 'Month YYYY') AS "MONTH_YEAR"
