@@ -1,6 +1,7 @@
 WITH cc AS (
   SELECT
     '1' AS "SORT_ORDER",
+    class_id,
     class,
     class_type.class_type,
     (SELECT class_type FROM class_type WHERE class_type_id = 4) AS "SHOULD_BE"
@@ -23,6 +24,7 @@ WITH cc AS (
 lifeskills AS (
   SELECT
     '2' AS "SORT_ORDER",
+    class_id,
     class,
     class_type.class_type,
     (SELECT class_type FROM class_type WHERE class_type_id = 10) AS "SHOULD_BE"
@@ -46,7 +48,7 @@ combined AS (
   SELECT * FROM cc
 )
 
-SELECT class, class_type, should_be
+SELECT class_id, class, class_type, should_be
 
 FROM combined
 
