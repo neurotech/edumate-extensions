@@ -2,8 +2,8 @@ WITH REPORT_VARS AS (
   SELECT
     TO_CHAR((CURRENT DATE), 'YYYY') AS "CURRENT_YEAR",
     (SELECT START_DATE FROM TERM WHERE TERM = 'Term 1' AND START_DATE LIKE TO_CHAR((CURRENT DATE), 'YYYY') || '-%%-%%' FETCH FIRST 1 ROW ONLY) AS "YEAR_START",
-    (DATE(CURRENT DATE)) AS "REPORT_END",
-    (DATE(CURRENT DATE) - 11 DAYS) AS "REPORT_FN_START"
+    (DATE(current date)) AS "REPORT_END",
+    (DATE(current date - 11 DAYS)) AS "REPORT_FN_START"
 
   FROM SYSIBM.SYSDUMMY1
 ),
@@ -89,12 +89,14 @@ final_report AS (
     ALC.EXPLAINED_ABSENCES AS "EXP_ABSENCES_YTD",
     ALC.UNEXPLAINED_ABSENCES AS "UNEXP_ABSENCES_YTD",
     ALC.ABSENCES_YTD AS "ABSENCES_YTD",
+
     -- Cumulative Absences and Lates are (Absences for the year to date / Number of termly fortnights passed for the year to date)
-    CAST((CAST(ALC.ABSENCES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "CUMUL_ABSENCES_AVERAGE",
+    CAST((ALC.ABSENCES_YTD / ALC.DIFF) AS DECIMAL(4,2)) AS "CUMUL_ABSENCES_AVERAGE",
     ALC.EXPLAINED_LATES AS "EXP_LATES_YTD",
     ALC.UNEXPLAINED_LATES AS "UNEXP_LATES_YTD",
     ALC.LATES_YTD AS "LATES_YTD",
-    CAST((CAST(ALC.LATES_YTD AS DECIMAL(3,1)) / CAST(ALC.DIFF AS DECIMAL(3,1))) AS DECIMAL(3,2)) AS "CUMUL_LATES_AVERAGE",
+    CAST((ALC.LATES_YTD / ALC.DIFF) AS DECIMAL(4,2)) AS "CUMUL_LATES_AVERAGE",
+
     TO_CHAR((SELECT REPORT_FN_START FROM REPORT_VARS), 'Month DD YYYY') AS "REPORT_FN_START",
     TO_CHAR((SELECT REPORT_END FROM REPORT_VARS), 'Month DD YYYY') AS "REPORT_END"
   
@@ -105,18 +107,11 @@ final_report AS (
   INNER JOIN house ON house.house_id = student.house_id
   
   -- Only join the lowest form run. This fixes students who are in two forms appearing in two forms.
-  INNER JOIN FORM_RUN ON FORM_RUN.FORM_RUN_ID = (
-      SELECT FORM_RUN.FORM_RUN_ID
-      FROM TABLE(EDUMATE.GET_ENROLED_STUDENTS_FORM_RUN(CURRENT DATE)) GRSFR
-      INNER JOIN FORM_RUN ON GRSFR.FORM_RUN_ID = FORM_RUN.FORM_RUN_ID
-      WHERE GRSFR.STUDENT_ID = GCES.STUDENT_ID
-      FETCH FIRST 1 ROW ONLY
-  )
-  INNER JOIN form ON form.form_id = form_run.form_id
+  INNER JOIN view_student_form_run vsfr ON vsfr.student_id = gces.student_id AND vsfr.academic_year = YEAR(current date)
+  INNER JOIN form ON form.form_id = vsfr.form_id
   
   LEFT JOIN ABSENCES_LATES_COUNTS ALC ON ALC.STUDENT_ID = GCES.STUDENT_ID
 )
 
 SELECT * FROM final_report
-
 ORDER BY grouping ASC, homeroom ASC, absences_ytd DESC, surname ASC, firstname ASC
