@@ -1,24 +1,12 @@
 /*
-Student religion counts by these types:
-  `Catholic, Orthodox, Other Christian, Other Faith, No Religion, Unknown`
-
-ESL students are:
-  `A student is categorised as English as a Second Language if their primary spoken language
-  is a language other than English and if they require at least some assistance in meeting
-  particular language and literacy demands in English.`
-
-LBOTE students are:
-  `A student is categorised as Language Background Other Than English if they speak a language other
-  than English in the home or if their parent(s)/guardian(s) speak a language other than English in
-  the home.`
-  
-  1st lang = Lang. @ Home
-  2nd lang = IB Number
+  Student religion counts by these types:
+    `Catholic, Orthodox, Other Christian, Other Faith, No Religion, Unknown`
 */
 
 WITH report_vars AS (
   SELECT
-    (current date) AS "REPORT_DATE"
+    --(current date) AS "REPORT_DATE"
+    ('[[As at=date]]') AS "REPORT_DATE"
   
   FROM SYSIBM.sysdummy1
 ),
@@ -105,11 +93,11 @@ religion_counts AS (
 )
 
 SELECT
+  religion_filtered AS "RELIGION",
   short_name AS "YR",
   gender,
-  religion_filtered AS "RELIGION_FILTERED",
   religion_count AS "COUNT"
 
 FROM religion_counts
 
-ORDER BY form_id, religion_filtered, gender
+ORDER BY religion_filtered, form_id, gender DESC

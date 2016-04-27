@@ -1,24 +1,7 @@
-/*
-Student religion counts by these types:
-  `Catholic, Orthodox, Other Christian, Other Faith, No Religion, Unknown`
-
-ESL students are:
-  `A student is categorised as English as a Second Language if their primary spoken language
-  is a language other than English and if they require at least some assistance in meeting
-  particular language and literacy demands in English.`
-
-LBOTE students are:
-  `A student is categorised as Language Background Other Than English if they speak a language other
-  than English in the home or if their parent(s)/guardian(s) speak a language other than English in
-  the home.`
-  
-  1st lang = Lang. @ Home
-  2nd lang = IB Number
-*/
-
 WITH report_vars AS (
   SELECT
-    (current date) AS "REPORT_DATE"
+    ('[[As at=date]]') AS "REPORT_DATE"
+    --(current date) AS "REPORT_DATE"
   
   FROM SYSIBM.sysdummy1
 ),
@@ -29,9 +12,10 @@ student_list AS (
     gass.contact_id,
     form_run.form_run_id,
     form_run.form_id,
-    -- Names
+    -- Name + Age
     COALESCE(contact.preferred_name, contact.firstname) AS "FIRSTNAME",
     contact.surname,
+    FLOOR(((current date) - contact.birthdate) / 10000) AS "AGE",
     -- Count data
     contact.gender_id,
     student.indigenous_id,
@@ -90,6 +74,19 @@ student_list AS (
     gass.student_status_id = 5
     AND
     student_type.student_type != 'Exchange Student'
+),
+
+age_counts AS (
+  SELECT
+    form_id,
+    gender_id,
+    indigenous_id,
+    age,
+    COUNT(student_id) AS "AGE_COUNTS"
+  
+  FROM student_list
+  
+  GROUP BY form_id, age, gender_id, indigenous_id
 ),
 
 religion_counts AS (
@@ -198,11 +195,17 @@ final_platform AS (
   FROM student_list
 )
 
+--SELECT * FROM student_list
+--SELECT * FROM age_counts ORDER BY form_id, age, gender_id, indigenous_id
+--SELECT * FROM religion_counts
 --SELECT * FROM esl_counts
 --SELECT * FROM lbote_students
 --SELECT * FROM lbote_counts
---SELECT * FROM religion_counts
+--SELECT * FROM form_counts
+--SELECT * FROM gender_counts
+--SELECT * FROM indigenous_counts
 --SELECT * FROM final_platform
+
 
 SELECT
   (CASE WHEN ROW_NUMBER() OVER (PARTITION BY form.form_id) = 1 THEN CHAR(form.short_name) ELSE '-' END) AS "FORM",
