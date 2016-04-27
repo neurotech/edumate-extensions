@@ -1,4 +1,11 @@
-WITH student_courses AS
+WITH report_vars AS (
+  SELECT
+    5 AS "SHOULD_BE"
+
+  FROM SYSIBM.sysdummy1
+),
+
+student_courses AS
     (
     SELECT 
         ROW_NUMBER() OVER (PARTITION BY student.student_id, course.course_id ORDER BY class_enrollment.end_date DESC, class_enrollment.start_date DESC) AS "CLASS_NUM",
@@ -69,11 +76,10 @@ WITH student_courses AS
         student_courses.class,
         student_courses.teacher,
         SUM(CASE WHEN stud_social_dev.achievement_id is null THEN 0 ELSE 1 END) AS "SCORED",
-        (CASE
-          WHEN student_courses.report_period LIKE '%nterim%' THEN COUNT(CASE WHEN social_dev.code LIKE '%INT%' THEN 1 ELSE null END)
-          ELSE COUNT(CASE WHEN social_dev.code NOT LIKE '%INT%' THEN 1 ELSE null END) END) AS "SOCIAL_DEVS"
+        (SELECT should_be FROM report_vars) AS "SHOULD_BE"
+
     FROM student_courses
-        -- get social_devs
+
         LEFT JOIN social_dev_course ON social_dev_course.course_id = student_courses.course_id
         LEFT JOIN social_dev ON social_dev_course.social_dev_id = social_dev.social_dev_id
         LEFT JOIN stud_social_dev ON stud_social_dev.student_id = student_courses.student_id
@@ -96,7 +102,7 @@ SELECT
   SCO.CLASS,
   SCO.TEACHER,
   (CASE WHEN SCO.SCORED = 0 THEN 'None' ELSE CHAR(SCO.SCORED) END) AS "SCORED",
-  SCO.SOCIAL_DEVS
+  SCO.SHOULD_BE
 
 FROM student_social_devs SCO
 
@@ -104,6 +110,6 @@ INNER JOIN STUDENT ON STUDENT.STUDENT_ID = SCO.STUDENT_ID
 INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
 INNER JOIN COURSE ON COURSE.COURSE_ID = SCO.COURSE_ID
 
-where sco.scored < sco.social_devs
+where sco.scored < (SELECT should_be FROM report_vars)
 
 ORDER BY SCO.DEPARTMENT, SCO.TEACHER, COURSE.COURSE, SCO.CLASS, CONTACT.SURNAME, CONTACT.FIRSTNAME
