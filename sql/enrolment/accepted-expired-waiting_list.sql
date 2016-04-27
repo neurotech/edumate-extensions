@@ -9,6 +9,9 @@ WITH aew AS
 	SELECT
 		contact.surname,
 		contact.firstname,
+		contact.email_address,
+		rank.rank,
+		stu_enrolment.rating,
 		gender.gender,
 		contact.birthdate,
 		
@@ -100,8 +103,9 @@ WITH aew AS
 	INNER JOIN gender on gender.gender_id = contact.gender_id
 	FULL JOIN priority on priority.priority_id = futurekids.priority_id
 	INNER JOIN form_run ON form_run.form_run_id = futurekids.exp_form_run_id
-	INNER JOIN STU_ENROLMENT ON futurekids.STUDENT_ID = STU_ENROLMENT.STUDENT_ID
+	INNER JOIN stu_enrolment ON futurekids.student_id = stu_enrolment.student_id
   LEFT JOIN EXTERNAL_SCHOOL ON STU_ENROLMENT.PREV_SCHOOL_ID = EXTERNAL_SCHOOL.EXTERNAL_SCHOOL_ID
+  LEFT JOIN rank ON rank.rank_id = contact.rank_id
 	
 	WHERE student_status_id IN (6, 14, 8, 9, 7, 10, 13)
 ),
@@ -120,6 +124,8 @@ gender_counts AS
 SELECT
 	aew.surname,
 	aew.firstname,
+	aew.rank,
+	aew.rating,
 	aew.gender,
 	CAST(gender_counts.males AS VARCHAR(3))||' Boys, '||CAST(gender_counts.females AS VARCHAR(3))||' Girls' AS "GENDER_COUNTS",
 	CAST(gender_counts.total_students AS VARCHAR(3))||' total students' AS "TOTAL_STUDENTS",
@@ -130,7 +136,8 @@ SELECT
 	aew.applied,
 	aew.next_interview AS "INTERVIEW",
 	aew.date_offer AS "DATE_OF_OFFER",
-	aew.EXTERNAL_SCHOOL as "CURRENT_SCHOOL"
+	aew.EXTERNAL_SCHOOL as "CURRENT_SCHOOL",
+	aew.email_address
 
 FROM aew
 
