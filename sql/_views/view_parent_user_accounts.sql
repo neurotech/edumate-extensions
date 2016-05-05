@@ -216,5 +216,10 @@ combined AS (
 SELECT * FROM (
   SELECT *
   FROM combined
-  ORDER BY status ASC, LOWER(surname), LOWER(firstname)
+  ORDER BY (CASE
+    WHEN status = 'current' THEN 1
+    WHEN status = 'past' THEN 2
+    WHEN status = 'deleted' THEN 3
+    ELSE 999
+  END) ASC, LOWER(surname), LOWER(firstname)
 )
