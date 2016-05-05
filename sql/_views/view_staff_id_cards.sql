@@ -30,12 +30,13 @@ INNER JOIN gender ON gender.gender_id = contact.gender_id
 LEFT JOIN salutation ON salutation.salutation_id = contact.salutation_id
 LEFT JOIN house ON house.house_id = staff.house_id
 
--- | GROUP_ID | GROUP         |
--- |----------|---------------|
--- | 386      | Current Staff |
--- | 483      | Stewards      |
+-- | GROUP_ID | GROUP                |
+-- |----------|----------------------|
+-- | 386      | Current Staff        |
+-- | 483      | Stewards             |
+-- | 530      | Current Casual Staff |
 
 WHERE
-  gm.groups_id IN (386,483)
+  gm.groups_id IN (386, 483, 530)
   AND
   (gm.effective_end > (current date) OR gm.effective_end IS null)
