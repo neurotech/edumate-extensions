@@ -1,4 +1,4 @@
-/* CREATE OR REPLACE VIEW DB2INST1.VIEW_PARENT_USER_ACCOUNTS (
+CREATE OR REPLACE VIEW DB2INST1.VIEW_PARENT_USER_ACCOUNTS (
   CARER_ID,
   CARER_NUMBER,
   CONTACT_ID,
@@ -9,24 +9,12 @@
   FULLNAME,
   EMAIL_ADDRESS,
   MOBILE_PHONE,
-  UNIQUE,
-  FORM_RUNS
-) AS */
+  UNIQUE
+) AS
 
 WITH all_students AS (
-  SELECT
-    gass.student_id,
-    gass.contact_id,
-    gass.student_number,
-    gass.start_date,
-    gass.end_date,
-    (CASE
-      WHEN gass.student_status_id IN (2, 3) THEN gass.last_form_run
-      WHEN gass.student_status_id IN (4, 5) THEN gass.form_runs
-    END) AS "FORM_RUN",
-    gass.student_status_id
-    
-  FROM TABLE(EDUMATE.getAllStudentStatus(current date)) gass
+  SELECT student_id, student_status_id
+  FROM TABLE(EDUMATE.getAllStudentStatus(current date))
 
   -- Limit to students with the status of:
   --  - Alumni (2)
@@ -34,51 +22,93 @@ WITH all_students AS (
   --  - Returning Enrolment (4)
   --  - Current Enrolment (5)
   WHERE
-    gass.student_status_id IN (2, 3, 4, 5)
+    student_status_id IN (2, 3, 4, 5)
     AND
-    gass.start_date >= DATE('2011-01-01')
+    start_date >= DATE('2011-01-01')
     AND
-    gass.end_date >= DATE('2012-01-01')
+    end_date >= DATE('2012-01-01')
 ),
 
-raw_data AS (
+student_mail_carers AS (
   SELECT
-    vsrc.student_id,
-    acs.student_status_id,
-    acs.form_run,
-    carer1_contact_id,
-    carer2_contact_id,
-    carer3_contact_id,
-    carer4_contact_id
+    view_student_mail_carers.student_id,
+    all_students.student_status_id,
+    view_student_mail_carers.carer1_contact_id,
+    view_student_mail_carers.carer2_contact_id,
+    view_student_mail_carers.carer3_contact_id,
+    view_student_mail_carers.carer4_contact_id,
+    'mail' AS "CARER_TYPE"
+
+  FROM view_student_mail_carers
   
-  FROM view_student_report_carers vsrc
+  LEFT JOIN all_students ON all_students.student_id = view_student_mail_carers.student_id
 
-  LEFT JOIN all_students acs ON acs.student_id = vsrc.student_id
+  WHERE view_student_mail_carers.student_id IN (SELECT student_id FROM all_students)
+),
 
-  WHERE vsrc.student_id IN (SELECT student_id FROM all_students)
+student_other_carers AS (
+  SELECT
+    view_student_other_carers.student_id,
+    all_students.student_status_id,
+    view_student_other_carers.carer1_contact_id,
+    view_student_other_carers.carer2_contact_id,
+    view_student_other_carers.carer3_contact_id,
+    view_student_other_carers.carer4_contact_id,
+    'other' AS "CARER_TYPE"
+
+  FROM view_student_other_carers
+  
+  LEFT JOIN all_students ON all_students.student_id = view_student_other_carers.student_id
+
+  WHERE view_student_other_carers.student_id IN (SELECT student_id FROM all_students)
+),
+
+student_report_carers AS (
+  SELECT
+    view_student_report_carers.student_id,
+    all_students.student_status_id,
+    view_student_report_carers.carer1_contact_id,
+    view_student_report_carers.carer2_contact_id,
+    view_student_report_carers.carer3_contact_id,
+    view_student_report_carers.carer4_contact_id,
+    'report' AS "CARER_TYPE"
+
+  FROM view_student_report_carers
+  
+  LEFT JOIN all_students ON all_students.student_id = view_student_report_carers.student_id
+
+  WHERE view_student_report_carers.student_id IN (SELECT student_id FROM all_students)
+),
+
+student_all_carers AS (
+  SELECT * FROM student_mail_carers
+  UNION ALL
+  SELECT * FROM student_other_carers
+  UNION ALL
+  SELECT * FROM student_report_carers
 ),
 
 carer_one AS (
-  SELECT student_id, student_status_id, carer1_contact_id AS "CARER_CONTACT_ID"
-  FROM raw_data
+  SELECT student_id, student_status_id, carer1_contact_id AS "CARER_CONTACT_ID", carer_type
+  FROM student_all_carers
   WHERE carer1_contact_id IS NOT null
 ),
 
 carer_two AS (
-  SELECT student_id, student_status_id, carer2_contact_id AS "CARER_CONTACT_ID"
-  FROM raw_data
+  SELECT student_id, student_status_id, carer2_contact_id AS "CARER_CONTACT_ID", carer_type
+  FROM student_all_carers
   WHERE carer2_contact_id IS NOT null
 ),
 
 carer_three AS (
-  SELECT student_id, student_status_id, carer3_contact_id AS "CARER_CONTACT_ID"
-  FROM raw_data
+  SELECT student_id, student_status_id, carer3_contact_id AS "CARER_CONTACT_ID", carer_type
+  FROM student_all_carers
   WHERE carer3_contact_id IS NOT null
 ),
 
 carer_four AS (
-  SELECT student_id, student_status_id, carer4_contact_id AS "CARER_CONTACT_ID"
-  FROM raw_data
+  SELECT student_id, student_status_id, carer4_contact_id AS "CARER_CONTACT_ID", carer_type
+  FROM student_all_carers
   WHERE carer4_contact_id IS NOT null
 ),
 
@@ -92,35 +122,51 @@ combined_carers AS (
   SELECT * FROM carer_four
 ),
 
-current_carers AS (
+active_carers AS (
   SELECT DISTINCT
     carer_contact_id,
     'current' AS "STATUS"
+
   FROM combined_carers
-  WHERE student_status_id = 5
-  ORDER BY carer_contact_id ASC
+
+  WHERE student_status_id = 5 AND carer_type = 'report'
 ),
 
 past_carers AS (
   SELECT DISTINCT
     carer_contact_id,
     'past' AS "STATUS"
+
   FROM combined_carers
+
   WHERE
     student_status_id != 5
     AND
-    carer_contact_id NOT IN (SELECT carer_contact_id FROM current_carers)
-  ORDER BY carer_contact_id ASC
+    carer_type = 'report'
+    AND
+    carer_contact_id NOT IN (SELECT carer_contact_id FROM active_carers)
 ),
 
-current_and_past_carers AS (
-  SELECT * FROM current_carers
+deleted_carers AS (
+  SELECT
+    carer_contact_id,
+    'deleted' AS "STATUS"
+
+  FROM combined_carers
+
+  WHERE carer_type != 'report' AND carer_contact_id NOT IN (SELECT carer_contact_id FROM active_carers) AND carer_contact_id NOT IN (SELECT carer_contact_id FROM past_carers)
+),
+
+active_past_deleted_carers AS (
+  SELECT * FROM active_carers
   UNION ALL
   SELECT * FROM past_carers
+  UNION ALL
+  SELECT * FROM deleted_carers
 ),
 
 all_carers AS (
-  SELECT DISTINCT * FROM current_and_past_carers
+  SELECT DISTINCT * FROM active_past_deleted_carers
 ),
 
 all_carers_unique_flag AS (
@@ -146,24 +192,11 @@ all_carers_usernames AS (
   INNER JOIN contact ON contact.contact_id = all_carers_unique_flag.carer_contact_id
 ),
 
-all_carers_with_student_ids AS (
-  SELECT
-    all_carers.carer_contact_id,
-    all_carers.status,
-    vsrc.student_id,
-    all_students.form_run
-  
-  FROM all_carers
-  
-  INNER JOIN view_student_report_carers vsrc ON vsrc.carer1_contact_id = all_carers.carer_contact_id OR vsrc.carer2_contact_id = all_carers.carer_contact_id OR vsrc.carer3_contact_id = all_carers.carer_contact_id OR vsrc.carer4_contact_id = all_carers.carer_contact_id
-  INNER JOIN all_students ON all_students.student_id = vsrc.student_id
-),
-
 combined AS (
   SELECT
     carer.carer_id,
     carer.carer_number,
-    current_carers.carer_contact_id AS "CONTACT_ID",
+    all_carers.carer_contact_id AS "CONTACT_ID",
     all_carers_usernames.status,
     all_carers_usernames.username,
     COALESCE(contact.preferred_name, contact.firstname) AS "FIRSTNAME",
@@ -172,29 +205,16 @@ combined AS (
     contact.email_address,
     contact.mobile_phone,
     all_carers_usernames.unique
-
-  FROM all_carers current_carers
-
-  INNER JOIN carer ON carer.contact_id = current_carers.carer_contact_id
-  INNER JOIN contact ON contact.contact_id = current_carers.carer_contact_id
-  LEFT JOIN all_carers_usernames ON all_carers_usernames.carer_contact_id = current_carers.carer_contact_id
-),
-
-all_carers_with_form_runs AS (
-  SELECT
-    combined.contact_id,
-    LISTAGG(acwsi.form_run, ', ') WITHIN GROUP(ORDER BY acwsi.form_run) AS "FORM_RUNS"
   
-  FROM combined
+  FROM all_carers
   
-  LEFT JOIN all_carers_with_student_ids acwsi ON acwsi.carer_contact_id = combined.contact_id
-  
-  GROUP BY combined.contact_id
+  INNER JOIN carer ON carer.contact_id = all_carers.carer_contact_id
+  INNER JOIN contact ON contact.contact_id = all_carers.carer_contact_id
+  LEFT JOIN all_carers_usernames ON all_carers_usernames.carer_contact_id = all_carers.carer_contact_id
 )
 
 SELECT * FROM (
-  SELECT combined.*, all_carers_with_form_runs.form_runs
+  SELECT *
   FROM combined
-  INNER JOIN all_carers_with_form_runs ON all_carers_with_form_runs.contact_id = combined.contact_id
   ORDER BY status ASC, LOWER(surname), LOWER(firstname)
 )
