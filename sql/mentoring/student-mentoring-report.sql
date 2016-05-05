@@ -28,15 +28,8 @@ active_classes AS (
   INNER JOIN view_student_class_enrolment vsce ON vsce.class_id = active.class_id AND vsce.academic_year_id = (SELECT ay FROM report_vars)
   INNER JOIN student ON student.student_id = vsce.student_id
   INNER JOIN contact student_contact ON student_contact.contact_id = student.contact_id
-  INNER JOIN form_run ON form_run.form_run_id =
-    (
-      SELECT form_run.form_run_id
-      FROM TABLE(EDUMATE.get_enroled_students_form_run(current date)) grsfr
-      INNER JOIN form_run ON grsfr.form_run_id = form_run.form_run_id
-      WHERE grsfr.student_id = vsce.student_id
-      FETCH FIRST 1 ROW ONLY
-    )
-  INNER JOIN form ON form.form_id = form_run.form_id
+  INNER JOIN view_student_form_run vsfr ON vsfr.student_id = vsce.student_id AND vsfr.academic_year_id = (SELECT ay FROM report_vars)
+  INNER JOIN form ON form.form_id = vsfr.form_id
    
   -- Teachers
   INNER JOIN class_teacher ON class_teacher.class_id = active.class_id
@@ -44,7 +37,10 @@ active_classes AS (
   INNER JOIN contact teacher_contact ON teacher_contact.contact_id = teacher.contact_id
   INNER JOIN staff ON staff.contact_id = teacher_contact.contact_id
   
-  WHERE class_type.class_type_id = 1100
+  WHERE
+    class_type.class_type_id = 2
+    AND
+    form.short_name IN ('11', '12')
 ),
 
 appointments AS (
