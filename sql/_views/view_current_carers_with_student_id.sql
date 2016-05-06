@@ -27,7 +27,7 @@ WITH all_students AS (
 current_carers AS (
   SELECT DISTINCT contact_id AS "CARER_CONTACT_ID"
   FROM DB2INST1.view_parent_user_accounts
-  WHERE status = 'current'
+  WHERE status = 'active'
 ),
 
 all_carers_with_student_ids AS (

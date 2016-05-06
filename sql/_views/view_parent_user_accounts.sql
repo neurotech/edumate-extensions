@@ -125,7 +125,7 @@ combined_carers AS (
 active_carers AS (
   SELECT DISTINCT
     carer_contact_id,
-    'current' AS "STATUS"
+    'active' AS "STATUS"
 
   FROM combined_carers
 
@@ -217,7 +217,7 @@ SELECT * FROM (
   SELECT *
   FROM combined
   ORDER BY (CASE
-    WHEN status = 'current' THEN 1
+    WHEN status = 'active' THEN 1
     WHEN status = 'past' THEN 2
     WHEN status = 'deleted' THEN 3
     ELSE 999
