@@ -1,5 +1,5 @@
 WITH report_vars AS (
-  SELECT (current date - 2 MONTHS) AS "REPORT_DATE"
+  SELECT (current date) AS "REPORT_DATE"
   FROM SYSIBM.sysdummy1
 ),
 
@@ -33,6 +33,7 @@ current_students AS (
 
 cc_enrolments AS (
   SELECT
+    class_enrollment.class_enrollment_id,
     class_enrollment.student_id,
     class_enrollment.class_id,
     class.class,
@@ -67,6 +68,7 @@ class_counts AS (
 
 duplicates AS (
   SELECT
+    cc_enrolments.class_enrollment_id,
     cc_enrolments.student_id,
     cc_enrolments.class,
     cc_enrolments.start_date,
@@ -82,6 +84,7 @@ duplicates AS (
 combined AS (
   SELECT
     ROW_NUMBER() OVER (PARTITION BY duplicates.student_id ORDER BY duplicates.start_date) AS "SORT",
+    duplicates.class_enrollment_id,
     student.student_number,
     COALESCE(contact.preferred_name, contact.firstname) || ' ' || contact.surname AS "STUDENT_NAME",
     contact.preferred_name,
@@ -103,6 +106,19 @@ first_duplicate AS (
 
 second_duplicate AS (
   SELECT * FROM combined WHERE sort = 2
+),
+
+fix AS (
+  SELECT
+    class_enrollment_id,
+    student_number,
+    student_name,
+    class,
+    start_date,
+    (CASE WHEN end_date >= (SELECT end_date FROM all_terms WHERE default_flag = 1 AND current_flag = 1) THEN (SELECT (start_date - 1 DAYS) FROM second_duplicate WHERE student_number = first_duplicate.student_number) END) AS "NEW_END_DATE",
+    end_date AS "OLD_END_DATE"
+
+  FROM first_duplicate
 )
 
 SELECT
@@ -110,20 +126,10 @@ SELECT
   student_name,
   class,
   start_date,
-  (CASE WHEN end_date > (SELECT end_date FROM all_terms WHERE default_flag = 1 AND current_flag = 1) THEN (SELECT end_date FROM all_terms WHERE default_flag = 1 AND current_flag = 1) ELSE end_date END) AS "END_DATE"
+  old_end_date,
+  new_end_date,
+  'UPDATE class_enrollment SET end_date_locked = 0, end_date = DATE(''' || new_end_date || ''') WHERE class_enrollment_id = ' || class_enrollment_id || ';' AS "FIX"
+  
+FROM fix
 
-FROM combined
-
-ORDER BY student_name, start_date ASC
-
-/* SELECT
-  student_number,
-  student_name,
-  class,
-  start_date,
-  (CASE WHEN end_date > (SELECT end_date FROM all_terms WHERE default_flag = 1 AND current_flag = 1) THEN (SELECT (start_date - 1 DAYS) FROM second_duplicate WHERE student_number = first_duplicate.student_number) END) AS "END_DATE",
-  end_date AS "OLD_END_DATE"
-
-FROM first_duplicate
-
-ORDER BY student_name, start_date ASC */
+ORDER BY student_name
