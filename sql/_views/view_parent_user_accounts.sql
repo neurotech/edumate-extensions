@@ -169,27 +169,45 @@ all_carers AS (
   SELECT DISTINCT * FROM active_past_deleted_carers
 ),
 
-all_carers_unique_flag AS (
+all_carers_with_names AS (
   SELECT
     all_carers.carer_contact_id,
-    ROW_NUMBER() OVER (PARTITION BY COALESCE(contact.preferred_name, contact.firstname) || ' ' || contact.surname ORDER BY all_carers.carer_contact_id ASC) AS "UNIQUE",
-    all_carers.status
-
+    (LOWER(REPLACE(REPLACE(contact.firstname, ' ', ''), '-', '')) || '.' || LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(contact.surname, '&#039;', ''), ' ', ''), '(', ''), ')', ''), '-', ''))) AS "NAME"
+    
   FROM all_carers
   
   INNER JOIN contact ON contact.contact_id = all_carers.carer_contact_id
 ),
 
+character_limit AS (
+  SELECT
+    all_carers_with_names.carer_contact_id,
+    (CASE WHEN LENGTH(name) > 18 THEN LEFT(name, 18) ELSE name END) AS "USERNAME"
+
+  FROM all_carers_with_names
+),
+
+all_carers_unique_flag AS (
+  SELECT
+    all_carers.carer_contact_id,
+    character_limit.username,
+    ROW_NUMBER() OVER (PARTITION BY username ORDER BY all_carers.carer_contact_id ASC) AS "UNIQUE",
+    all_carers.status
+
+  FROM all_carers
+  
+  INNER JOIN contact ON contact.contact_id = all_carers.carer_contact_id
+  INNER JOIN character_limit ON character_limit.carer_contact_id = all_carers.carer_contact_id
+),
+
 all_carers_usernames AS (
   SELECT
     all_carers_unique_flag.carer_contact_id,
-    (LOWER(REPLACE(firstname, ' ', '-')) || '.' || LOWER(REPLACE(REPLACE(REPLACE(REPLACE(surname, '&#039;', ''), ' ', '-'), '(', ''), ')', '')) || (CASE WHEN unique = 1 THEN '' ELSE CAST((unique - 1) AS CHAR) END)) AS "USERNAME",
+    (all_carers_unique_flag.username || (CASE WHEN unique = 1 THEN '' ELSE CAST((unique - 1) AS CHAR) END)) AS "USERNAME",
     all_carers_unique_flag.unique,
     all_carers_unique_flag.status
 
   FROM all_carers_unique_flag
-  
-  INNER JOIN contact ON contact.contact_id = all_carers_unique_flag.carer_contact_id
 ),
 
 combined AS (
