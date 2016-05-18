@@ -38,11 +38,11 @@ adjusted_dates AS (
 )
 
 SELECT
-  student_id,
-  class_id,
-  start_date,
-  end_date AS "NEW_END_DATE",
-  old_end_date,
-  'UPDATE class_enrollment SET end_date_locked = 0, end_date = DATE(''' || end_date || ''') WHERE class_enrollment_id = ' || class_enrollment_id || ';' AS "SQL_FIX"
+  --student_id,
+  --class_id,
+  --start_date,
+  --end_date AS "NEW_END_DATE",
+  --old_end_date,
+  'UPDATE class_enrollment SET end_date_locked = 0, end_date = DATE(''' || end_date || ''') WHERE class_enrollment_id = ' || class_enrollment_id || ';' AS "FIX"
 
 FROM adjusted_dates

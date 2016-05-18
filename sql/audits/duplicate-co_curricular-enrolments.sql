@@ -122,12 +122,12 @@ fix AS (
 )
 
 SELECT
-  student_number,
-  student_name,
-  class,
-  start_date,
-  old_end_date,
-  new_end_date,
+  --student_number,
+  --student_name,
+  --class,
+  --start_date,
+  --old_end_date,
+  --new_end_date,
   'UPDATE class_enrollment SET end_date_locked = 0, end_date = DATE(''' || new_end_date || ''') WHERE class_enrollment_id = ' || class_enrollment_id || ';' AS "FIX"
   
 FROM fix
