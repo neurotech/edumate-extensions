@@ -1,5 +1,5 @@
 WITH report_vars AS (
-  SELECT '[[As at=date]]' AS "REPORT_DATE" FROM SYSIBM.sysdummy1
+  SELECT DATE('[[As at=date]]') AS "REPORT_DATE" FROM SYSIBM.sysdummy1
 ),
 
 raw_data AS (
@@ -25,7 +25,7 @@ raw_data AS (
   WHERE
     event.event_type_id = 2
     AND
-    (SELECT report_date FROM report_vars) BETWEEN DATE(start_date) AND DATE(end_date)
+    (DATE(start_date) >= (SELECT report_date - 1 DAY FROM report_vars))
     AND
     attendance.attend_status_id = 3
 ),
@@ -90,6 +90,7 @@ lifetime_counts AS (
 
 combined AS (
   SELECT
+    (CASE WHEN DATE(raw_data.start_date) = (SELECT report_date FROM report_vars) THEN 'Today' ELSE 'Yesterday' END) AS "WHEN",
     COALESCE(contact.preferred_name, contact.firstname) AS "FIRSTNAME",
     UPPER(contact.surname) AS "SURNAME",
     event,
@@ -119,4 +120,4 @@ SELECT *
 
 FROM combined
 
-ORDER BY surname, firstname, yr, house, hr, event, event_date, start_time, end_time
+ORDER BY when ASC, surname, firstname, yr, house, hr, event, event_date, start_time, end_time
