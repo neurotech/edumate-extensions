@@ -1,5 +1,5 @@
 WITH report_vars AS (
-  SELECT (date('[[Start date=date]]')) as "REPORT_DATE"
+  SELECT DATE('[[Start date=date]]') as "REPORT_DATE"
   FROM SYSIBM.SYSDUMMY1
 )
 
