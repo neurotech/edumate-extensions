@@ -5,12 +5,13 @@ WITH report_vars AS (
 
 raw_data AS (
   SELECT
+    department.department,
     course.course,
     COALESCE(contact.preferred_name, contact.firstname) || ' ' || contact.surname AS "STUDENT",
-    task.task,
-    stud_task_raw_mark.raw_mark,
-    stud_task_raw_mark.estimate,
-    task_estimate_status.task_estimate_status
+    task.task AS "TASK_NAME",
+    stud_task_raw_mark.raw_mark AS "MARK",
+    stud_task_raw_mark.estimate AS "ESTIMATED_MARK",
+    task_estimate_status.task_estimate_status AS "ESTIMATE_STATUS"
     
   FROM coursework_task
   
@@ -19,6 +20,9 @@ raw_data AS (
   LEFT JOIN task_estimate_status ON task_estimate_status.task_estimate_status_id = stud_task_raw_mark.task_estimate_status_id
   
   INNER JOIN course ON course.course_id = coursework_task.course_id
+  INNER JOIN subject ON subject.subject_id = course.subject_id
+  INNER JOIN department ON department.department_id = subject.department_id
+
   INNER JOIN student ON student.student_id = stud_task_raw_mark.student_id
   INNER JOIN contact ON contact.contact_id = student.contact_id
   
@@ -34,6 +38,6 @@ SELECT *
 
 FROM raw_data
 
-WHERE raw_mark IS null AND (task_estimate_status IS null OR task_estimate_status != 'N/A')
+WHERE mark IS null AND (estimate_status IS null OR estimate_status != 'N/A')
 
-ORDER BY course, task
+ORDER BY department, course, task_name
