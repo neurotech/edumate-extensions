@@ -54,9 +54,9 @@ ABSENCES_LATES_COUNTS AS (
     ) AS "DIFF",
     -- Conditional SUMs to calcuate total instances of fortnight, explained YTD, unexplained YTD, and total YTD absences/lates.
     SUM(CASE WHEN SAD.DATE_ON BETWEEN SAD.REPORT_FN_START AND SAD.REPORT_END AND (SAD.AM IN (2,3,4,5,6,7) AND SAD.PM IN (2,3,4,5,6,7)) THEN 1 ELSE 0 END) AS "FORTNIGHT_ABSENCES",
-    SUM(CASE WHEN SAD.AM IN (3,4,5,6) AND SAD.PM IN (3,4,5,6) THEN 1 ELSE 0 END) AS "EXPLAINED_ABSENCES",
+    SUM(CASE WHEN SAD.AM IN (4,5,6) AND SAD.PM IN (4,5,6) THEN 1 ELSE 0 END) AS "EXPLAINED_ABSENCES",
     SUM(CASE WHEN SAD.AM IN (2,7) AND SAD.PM IN (2,7) THEN 1 ELSE 0 END) AS "UNEXPLAINED_ABSENCES",
-    SUM(CASE WHEN SAD.AM IN (2,3,4,5,6,7) AND SAD.PM IN (2,3,4,5,6,7) THEN 1 ELSE 0 END) AS "ABSENCES_YTD",
+    SUM(CASE WHEN SAD.AM IN (2,4,5,6,7) AND SAD.PM IN (2,4,5,6,7) THEN 1 ELSE 0 END) AS "ABSENCES_YTD",
 
     SUM(CASE WHEN SAD.DATE_ON BETWEEN SAD.REPORT_FN_START AND SAD.REPORT_END AND SAD.AM IN (14,15,16,17,18,19) THEN 1 ELSE 0 END) AS "FORTNIGHT_LATES",
     SUM(CASE WHEN SAD.AM IN (16,17,18,19) THEN 1 ELSE 0 END) AS "EXPLAINED_LATES",
@@ -105,8 +105,7 @@ final_report AS (
   INNER JOIN STUDENT ON STUDENT.STUDENT_ID = GCES.STUDENT_ID
   INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STUDENT.CONTACT_ID
   INNER JOIN house ON house.house_id = student.house_id
-  
-  -- Only join the lowest form run. This fixes students who are in two forms appearing in two forms.
+
   INNER JOIN view_student_form_run vsfr ON vsfr.student_id = gces.student_id AND vsfr.academic_year = YEAR(current date)
   INNER JOIN form ON form.form_id = vsfr.form_id
   
