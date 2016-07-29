@@ -171,12 +171,44 @@ award_winners_agg AS (
   FROM award_winners
   
   GROUP BY student_id
+),
+
+leadership_positions AS (
+  SELECT student_id, class, course
+  FROM view_student_class_enrolment
+  WHERE academic_year = YEAR(current date) AND class_type_id = 1172 AND course = 'Leadership Positions' AND student_id IN (SELECT student_id FROM all_students)
+),
+
+leadership_positions_agg AS (
+  SELECT
+    student_id,
+    LISTAGG(class, ', ') WITHIN GROUP(ORDER BY class) AS "POSITIONS"
+
+  FROM leadership_positions
+  
+  GROUP BY student_id
+),
+
+extra_curricular AS (
+  SELECT student_id, class, course
+  FROM view_student_class_enrolment
+  WHERE academic_year = YEAR(current date) AND class_type_id = 1172 AND course = 'Extra-Curricular Involvement' AND student_id IN (SELECT student_id FROM all_students)
+),
+
+extra_curricular_agg AS (
+  SELECT
+    student_id,
+    LISTAGG(class, ', ') WITHIN GROUP(ORDER BY class) AS "EXTRA_CURRICULAR"
+
+  FROM extra_curricular
+  
+  GROUP BY student_id
 )
 
 SELECT
   student.student_number,
   contact.firstname,
-  COALESCE(contact.preferred_name, '') AS "PREFERRED_NAME",
+  COALESCE((CASE WHEN contact.preferred_name IS NOT null THEN '(' || contact.preferred_name || ')' ELSE null END), '') AS "PREFERRED_NAME_BRACKETS",
   contact.surname,
   REPLACE(REPLACE(hr.class, '&#039;', ''''), ' Home Room ', ' ') AS "HOMEROOM",
   --contact.birthdate AS "DOB",
@@ -189,7 +221,9 @@ SELECT
   senior_courses.courses AS "SENIOR_COURSES",
   COALESCE(prelim_cr.courses, '') AS "PRELIM_CC_REP",
   COALESCE(senior_cr.courses, '') AS "SENIOR_CC_REP",
-  COALESCE(award_winners_agg.awards, '') AS "PRELIM_AWARDS"
+  COALESCE(award_winners_agg.awards, '') AS "PRELIM_AWARDS",
+  COALESCE(leadership_positions_agg.positions, '') AS "LEADERSHIP_POSITIONS_HELD",
+  COALESCE(extra_curricular_agg.extra_curricular, '') AS "EXTRA_CURRICULAR"
 
 FROM all_students students
 
@@ -202,6 +236,8 @@ LEFT JOIN senior_courses ON senior_courses.student_id = students.student_id
 LEFT JOIN prelim_cr ON prelim_cr.student_id = students.student_id
 LEFT JOIN senior_cr ON senior_cr.student_id = students.student_id
 LEFT JOIN award_winners_agg ON award_winners_agg.student_id = students.student_id
+LEFT JOIN leadership_positions_agg ON leadership_positions_agg.student_id = students.student_id
+LEFT JOIN extra_curricular_agg ON extra_curricular_agg.student_id = students.student_id
 
 WHERE gass.student_status_id = 5 AND gass.last_form_run_id = (SELECT form_run_id FROM form_run WHERE form_id = 14 AND form_run LIKE TO_CHAR((current date), 'YYYY') || '%')
 
