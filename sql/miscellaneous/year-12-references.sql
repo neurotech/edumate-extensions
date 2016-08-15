@@ -73,12 +73,13 @@ senior_courses AS (
 ),
 
 prelim_cr AS (
-  SELECT
+  SELECT DISTINCT
     vsce.student_id,
-    LISTAGG(course.print_name, ', ') WITHIN GROUP(ORDER BY vsce.course) AS "COURSES"
-  
+    course.course,
+    course.print_name AS "COURSES"
+
   FROM view_student_class_enrolment vsce
-  
+
   LEFT JOIN course ON course.course_id = vsce.course_id
   
   WHERE
@@ -86,17 +87,27 @@ prelim_cr AS (
     AND
     vsce.class_type_id = 4
     AND
-    (current date - 1 YEAR) BETWEEN (vsce.start_date) AND (vsce.end_date)
+    YEAR(vsce.start_date) = (YEAR(current date - 1 YEAR))
+    AND
+    YEAR(vsce.end_date) = (YEAR(current date - 1 YEAR))
     AND
     course.code LIKE 'CR%'
+),
+
+prelim_cr_agg AS (
+  SELECT
+    student_id,
+    LISTAGG(courses, ', ') WITHIN GROUP(ORDER BY courses) AS "COURSES"
+    
+  FROM prelim_cr
   
-  GROUP BY vsce.student_id
+  GROUP BY student_id
 ),
 
 senior_cr AS (
-  SELECT
+  SELECT DISTINCT
     vsce.student_id,
-    LISTAGG(course.print_name, ', ') WITHIN GROUP(ORDER BY vsce.course) AS "COURSES"
+    course.print_name AS "COURSES"
   
   FROM view_student_class_enrolment vsce
   
@@ -107,11 +118,21 @@ senior_cr AS (
     AND
     vsce.class_type_id = 4
     AND
-    (current date) BETWEEN (vsce.start_date) AND (vsce.end_date)
+    YEAR(vsce.start_date) = (YEAR(current date))
+    AND
+    YEAR(vsce.end_date) = (YEAR(current date))
     AND
     course.code LIKE 'CR%'
+),
+
+senior_cr_agg AS (
+  SELECT
+    student_id,
+    LISTAGG(courses, ', ') WITHIN GROUP(ORDER BY courses) AS "COURSES"
+    
+  FROM senior_cr
   
-  GROUP BY vsce.student_id
+  GROUP BY student_id
 ),
 
 award_winners AS (
@@ -208,33 +229,43 @@ extra_curricular_agg AS (
 SELECT
   student.student_number,
   contact.firstname,
+  COALESCE(contact.preferred_name, '') AS "PREFERRED_NAME",
   COALESCE((CASE WHEN contact.preferred_name IS NOT null THEN '(' || contact.preferred_name || ')' ELSE null END), '') AS "PREFERRED_NAME_BRACKETS",
   contact.surname,
   REPLACE(REPLACE(hr.class, '&#039;', ''''), ' Home Room ', ' ') AS "HOMEROOM",
-  --contact.birthdate AS "DOB",
   (students.time_at_rbc / 365) + 1 AS "TIME_AT_RBC",
-  --CAST(students.time_at_rbc AS DECIMAL(3,2)) AS "TIME_AT_RBC",
-  --CAST(ROUND(students.time_at_rbc) AS DECIMAL(3,2)) AS "TIME_AT_RBC",
-  gass.start_date,
-  gass.end_date,
-  gass.last_form_run AS "GRADUATING_FORM_RUN",
   senior_courses.courses AS "SENIOR_COURSES",
-  COALESCE(prelim_cr.courses, '') AS "PRELIM_CC_REP",
-  COALESCE(senior_cr.courses, '') AS "SENIOR_CC_REP",
-  COALESCE(award_winners_agg.awards, '') AS "PRELIM_AWARDS",
   COALESCE(leadership_positions_agg.positions, '') AS "LEADERSHIP_POSITIONS_HELD",
-  COALESCE(extra_curricular_agg.extra_curricular, '') AS "EXTRA_CURRICULAR"
+  COALESCE(prelim_cr_agg.courses, '') AS "PRELIM_CC_REP",
+  COALESCE(senior_cr_agg.courses, '') AS "SENIOR_CC_REP",
+  COALESCE(extra_curricular_agg.extra_curricular, '') AS "EXTRA_CURRICULAR",
+  '' AS "CC_AWARDS_YEAR_11",
+  '' AS "CC_AWARDS_YEAR_12",
+  COALESCE(award_winners_agg.awards, '') AS "PRELIM_AWARDS",
+  '' AS "SPECIAL_AWARDS",
+  '' AS "REPRESENTED_COLLLEGE_YEAR_11",
+  '' AS "REPRESENTED_COLLLEGE_YEAR_12",
+  '' AS "OTHER_CONTRIBUTIONS",
+  '' AS "HR_COMMENT",
+  (CASE WHEN gender.gender = 'Male' THEN 'He' ELSE 'She' END) AS "HE_SHE",
+  (CASE WHEN gender.gender = 'Male' THEN 'he' ELSE 'she' END) AS "HE_SHE_LOWERCASE",
+  (CASE WHEN gender.gender = 'Male' THEN 'His' ELSE 'Her' END) AS "HIS_HER",
+  (CASE WHEN gender.gender = 'Male' THEN 'his' ELSE 'her' END) AS "HIS_HER_LOWERCASE",
+  (CASE WHEN gender.gender = 'Male' THEN 'Him' ELSE 'Her' END) AS "HIM_HER",
+  (CASE WHEN gender.gender = 'Male' THEN 'him' ELSE 'her' END) AS "HIM_HER_LOWERCASE"
+
 
 FROM all_students students
 
 INNER JOIN TABLE(EDUMATE.getallstudentstatus(current date)) gass ON gass.student_id = students.student_id
 INNER JOIN contact ON contact.contact_id = gass.contact_id
 INNER JOIN student ON student.student_id = students.student_id
+INNER JOIN gender ON gender.gender_id = contact.gender_id
 INNER JOIN view_student_class_enrolment vsce ON vsce.student_id = gass.student_id
 INNER JOIN class hr ON hr.class_id = vsce.class_id AND hr.class_type_id = 2 AND vsce.academic_year = TO_CHAR((current date), 'YYYY') AND vsce.end_date > (current date)
 LEFT JOIN senior_courses ON senior_courses.student_id = students.student_id
-LEFT JOIN prelim_cr ON prelim_cr.student_id = students.student_id
-LEFT JOIN senior_cr ON senior_cr.student_id = students.student_id
+LEFT JOIN prelim_cr_agg ON prelim_cr_agg.student_id = students.student_id
+LEFT JOIN senior_cr_agg ON senior_cr_agg.student_id = students.student_id
 LEFT JOIN award_winners_agg ON award_winners_agg.student_id = students.student_id
 LEFT JOIN leadership_positions_agg ON leadership_positions_agg.student_id = students.student_id
 LEFT JOIN extra_curricular_agg ON extra_curricular_agg.student_id = students.student_id
