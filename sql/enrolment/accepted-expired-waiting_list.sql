@@ -7,6 +7,7 @@
 WITH aew AS
 (
 	SELECT
+	  student.student_number,
 		contact.surname,
 		contact.firstname,
 		contact.email_address,
@@ -100,6 +101,7 @@ WITH aew AS
 	FROM table(edumate.getallstudentstatus(current_date)) futurekids
 	
 	INNER JOIN contact on contact.contact_id = futurekids.contact_id
+	INNER JOIN student ON student.contact_id = futurekids.contact_id
 	INNER JOIN gender on gender.gender_id = contact.gender_id
 	FULL JOIN priority on priority.priority_id = futurekids.priority_id
 	INNER JOIN form_run ON form_run.form_run_id = futurekids.exp_form_run_id
@@ -122,6 +124,7 @@ gender_counts AS
 )
 
 SELECT
+  aew.student_number,
 	aew.surname,
 	aew.firstname,
 	aew.rank,
