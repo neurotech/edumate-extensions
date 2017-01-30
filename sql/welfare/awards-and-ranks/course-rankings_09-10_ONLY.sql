@@ -8,7 +8,7 @@ selected_period AS (
   SELECT report_period_id
   FROM report_period
   --WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]'
-  WHERE report_period.report_period = '2015 Year 09/10 Vertical Electives Only'
+  WHERE report_period.report_period = '2016 Year 09/10 Vertical Electives Only'
 ),
 
     student_form AS
@@ -32,25 +32,27 @@ selected_period AS (
         course.course_id,
         (CASE
           -- Random electives
-          WHEN course.course IN ('09 French', '10 French') THEN '09/10 French'
-          WHEN course.course IN ('09 Italian', '10 Italian') THEN '09/10 Italian'
-          WHEN course.course IN ('09 Mandarin', '10 Mandarin'0 THEN '09/10 Mandarin'
-          WHEN course.course IN ('09 Commerce', '10 Commerce') THEN '09/10 Commerce'
-          WHEN course.course IN ('09 Physical Activity and Sports Science', '10 Physical Activity and Sports Science') THEN '09/10 Physical Activity and Sports Science'
-          WHEN course.course IN ('09 iThink', '10 iThink') THEN '09/10 iThink'
+          --WHEN course.course IN ('09 French', '10 French') THEN '09/10 French'
+          --WHEN course.course IN ('09 Italian', '10 Italian') THEN '09/10 Italian'
+          --WHEN course.course IN ('09 Mandarin', '10 Mandarin') THEN '09/10 Mandarin'
+          --WHEN course.course IN ('09 Commerce', '10 Commerce') THEN '09/10 Commerce'
+          --WHEN course.course IN ('09 Physical Activity and Sports Science', '10 Physical Activity and Sports Science') THEN '09/10 Physical Activity and Sports Science'
+          --WHEN course.course IN ('09 iThink', '10 iThink') THEN '09/10 iThink'
         
           -- CAPA
-          WHEN course.course IN ('09 Dance', '10 Dance') THEN '09/10 Dance'
-          WHEN course.course IN ('09 Drama', '10 Drama') THEN '09/10 Drama'
-          WHEN course.course IN ('09 Music', '10 Music') THEN '09/10 Music'
-          WHEN course.course IN ('09 Photographic and Digital Media', '10 Photographic and Digital Media') THEN '09/10 Photographic and Digital Media'
-          WHEN course.course IN ('09 Visual Arts', '10 Visual Arts') THEN '09/10 Visual Arts'
-        
+          WHEN course.course IN ('09 Dance', '10 Dance') THEN 'Stage 5 Dance'
+          WHEN course.course IN ('09 Drama', '10 Drama') THEN 'Stage 5 Drama'
+          WHEN course.course IN ('09 Music', '10 Music') THEN 'Stage 5 Music'
+          WHEN course.course IN ('09 Photographic and Digital Media', '10 Photographic and Digital Media') THEN 'Stage 5 Photographic and Digital Media'
+          WHEN course.course IN ('09 Visual Arts', '10 Visual Arts') THEN 'Stage 5 Visual Arts'
+          
           -- TAS
-          WHEN course.course IN ('09 Food Technology', '10 Food Technology') THEN '09/10 Food Technology'
-          WHEN course.course IN ('09 Industrial Technology (engineering) 100', '10 Industrial Technology (engineering) 100') THEN '09/10 Industrial Technology (engineering) 100'
-          WHEN course.course IN ('09 Information Software Technology', '10 Information Software Technology') THEN '09/10 Information Software Technology'
-          WHEN course.course IN ('09 Textiles Technology', '10 Textiles Technology') THEN '09/10 Textiles Technology'
+          WHEN course.course IN ('09 Design and Technology', '10 Design and Technology') THEN 'Stage 5 Design and Technology'
+          WHEN course.course IN ('09 Food Technology', '10 Food Technology') THEN 'Stage 5 Food Technology'
+          WHEN course.course IN ('09 Industrial Technology (engineering) 100', '10 Industrial Technology (engineering) 100') THEN 'Stage 5 Industrial Technology (engineering) 100'
+          WHEN course.course IN ('09 Industrial Technology (Timber)', '10 Industrial Technology (Timber)') THEN 'Stage 5 Industrial Technology (Timber)'
+          WHEN course.course IN ('09 Information Software Technology', '10 Information Software Technology') THEN 'Stage 5 Information Software Technology'
+          WHEN course.course IN ('09 Textiles Technology', '10 Textiles Technology') THEN 'Stage 5 Textiles Technology'
         
           ELSE course.course
         END) AS "COURSE",
@@ -87,6 +89,49 @@ selected_period AS (
     GROUP BY report_period.report_period_id, student.student_id, course.course, course.course_id
     ),
 
+student_classes AS (
+  SELECT
+    report_period.report_period_id,
+    report_period.start_date AS "REPORT_START",
+    report_period.end_date AS "REPORT_END",
+    student.student_id,
+    view_student_class_enrolment.course_id,
+    view_student_class_enrolment.class_id,
+    view_student_class_enrolment.start_date,
+    view_student_class_enrolment.end_date
+
+  FROM report_period
+
+  INNER JOIN selected_period ON selected_period.report_period_id = report_period.report_period_id
+  INNER JOIN report_period_form_run ON report_period_form_run.report_period_id = report_period.report_period_id
+  INNER JOIN form_run ON form_run.form_run_id = report_period_form_run.form_run_id
+  INNER JOIN timetable ON timetable.timetable_id = form_run.timetable_id
+  INNER JOIN academic_year ON academic_year.academic_year_id = timetable.academic_year_id
+
+  -- student included in report period
+  INNER JOIN student_form_run ON student_form_run.form_run_id = form_run.form_run_id
+  INNER JOIN student ON student.student_id = student_form_run.student_id
+
+  -- get student classes > courses
+  INNER JOIN view_student_class_enrolment ON view_student_class_enrolment.student_id = student.student_id
+    AND view_student_class_enrolment.start_date <= timetable.computed_end_date
+    AND view_student_class_enrolment.end_date >= timetable.computed_start_date
+    AND view_student_class_enrolment.academic_year_id = academic_year.academic_year_id
+),
+
+student_classes_aggregate AS (
+  SELECT
+    student_classes.student_id, 
+    student_classes.course_id,
+    LISTAGG(class.class, '<br>') WITHIN GROUP(ORDER BY student_classes.class_id) AS "CLASSES"
+
+  FROM student_classes
+  
+  INNER JOIN class ON class.class_id = student_classes.class_id
+  
+  GROUP BY student_classes.student_id, student_classes.course_id
+),
+
     ordered_task_results AS
     (
     SELECT
@@ -122,7 +167,9 @@ selected_period AS (
         department.department,
         subject.subject,
         --COALESCE(course.course,course.print_name,course.course) AS COURSE,
+        ordered_task_results.course_id,
         ordered_task_results.course,
+        ordered_task_results.student_id,
         course_rank AS RANK,
         (CASE
           WHEN course_rank = 1 THEN '**'
@@ -155,14 +202,37 @@ selected_period AS (
         INNER JOIN department ON department.department_id = subject.department_id
     )
 
---SELECT * FROM raw_course_results WHERE student_id = 30484
-
 SELECT
+  student_course_results.student_number AS "student_number",
+  13597 AS "staff_number",
+  (current date) AS "date_entered",
+  REPLACE(student_classes_aggregate.classes, '&amp;', '&') AS "detail",
+  (CASE WHEN aw = '**' THEN 'Academic Excellence' WHEN aw = '*' THEN 'Academic Merit' END) AS "award",
+  (CASE WHEN aw = '**' THEN 'Academic Excellence' WHEN aw = '*' THEN 'Academic Merit' END) AS "what_happened",
+  student_course_results.course || ' ' || REPLACE(student_classes_aggregate.classes, '&amp;', '&') AS "class",
+  0 AS "points",
+  '' as "refer_form",
+  '' as "refer_house",
+  '' as "refer_department",
+  '' as "refer_school",
+  (current date) as "incident_date"
+
+FROM student_course_results
+
+LEFT JOIN student_classes_aggregate ON student_classes_aggregate.student_id = student_course_results.student_id AND student_classes_aggregate.course_id = student_course_results.course_id
+
+WHERE aw IN ('**','*')
+
+ORDER BY "award", student_course_results.course
+
+/* SELECT
   (SELECT TO_CHAR(due_date, 'DD Month YYYY') FROM report_vars) AS "DUE_DATE",
+  TO_CHAR((current date), 'DD Month YYYY') || ' at ' || CHAR(TIME(current timestamp),USA) AS "PRINTED",
   (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
   (SELECT print_name FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD_PRINT_NAME",
   department,
   (CASE WHEN student_course_results.sort_order = 1 THEN course ELSE null END) AS "COURSE",
+  student_classes_aggregate.classes AS "CLASS",
   rank,
   aw,
   overall_mark,
@@ -175,6 +245,8 @@ SELECT
 
 FROM student_course_results
 
-WHERE aw IN ('**','*')
+LEFT JOIN student_classes_aggregate ON student_classes_aggregate.student_id = student_course_results.student_id AND student_classes_aggregate.course_id = student_course_results.course_id
 
-ORDER BY department, student_course_results.course, rank
+--WHERE aw IN ('**','*')
+
+ORDER BY department, student_course_results.course, rank */

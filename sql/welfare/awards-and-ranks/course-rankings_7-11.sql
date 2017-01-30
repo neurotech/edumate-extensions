@@ -9,11 +9,12 @@ selected_period AS (
   FROM report_period
   --WHERE report_period.report_period = '[[Report Period=query_list(SELECT report_period FROM report_period WHERE start_date <= (current date) AND YEAR(end_date) = YEAR(current date) ORDER BY report_period)]]'
   
-  WHERE report_period.report_period = '2015 Year 07 Ranking'
+  --WHERE report_period.report_period = '2015 Year 07 Ranking'
   --WHERE report_period.report_period = '2015 Year 08 Ranking'
   --WHERE report_period.report_period = '2015 Year 09 Ranking'
   --WHERE report_period.report_period = '2015 Year 10 Ranking'
   --WHERE report_period.report_period = '2015 Year 11 Ranking'
+  WHERE report_period.report_period = '2016 Year 12 Ranking'
 ),
 
 student_form AS (
@@ -118,7 +119,7 @@ student_classes_aggregate AS (
   SELECT
     student_classes.student_id, 
     student_classes.course_id,
-    LISTAGG(class.identifier, '<br>') WITHIN GROUP(ORDER BY student_classes.class_id) AS "CLASSES"
+    LISTAGG(class.class, '<br>') WITHIN GROUP(ORDER BY student_classes.class_id) AS "CLASSES"
 
   FROM student_classes
   
@@ -201,12 +202,13 @@ SELECT
 
   INNER JOIN subject ON subject.subject_id = course.subject_id
   INNER JOIN department ON department.department_id = subject.department_id
-)
+),
 
 --SELECT * FROM raw_course_results WHERE student_id = 33190 AND course_id = 134
 --SELECT * FROM ordered_task_results WHERE student_id = 33190 AND course_id = 134
 --SELECT * FROM student_course_results WHERE student_id = 33190 AND course_id = 134 
 
+final_report AS (
 SELECT
   student_course_results.sort_order,
   (SELECT TO_CHAR(due_date, 'DD Month YYYY') FROM report_vars) AS "DUE_DATE",
@@ -214,6 +216,7 @@ SELECT
   (SELECT report_period FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD",
   (SELECT print_name FROM report_period WHERE report_period_id = (SELECT report_period_id FROM selected_period)) AS "REPORT_PERIOD_PRINT_NAME",
   department,
+  subject,
   REPLACE(course, '&amp;', '&') AS "COURSE",
   student_classes_aggregate.classes AS "CLASS",
   rank,
@@ -232,7 +235,33 @@ SELECT
 FROM student_course_results
 
 LEFT JOIN student_classes_aggregate ON student_classes_aggregate.student_id = student_course_results.student_id AND student_classes_aggregate.course_id = student_course_results.course_id
+)
 
-WHERE aw IN ('**','*')
+SELECT
+  student_number,
+  4450 AS "STAFF_NUMBER",
+  '2016-13-09' AS "DATE_ENTERED",
+  class AS "DETAIL",
+  (CASE
+    WHEN aw = '**' THEN 'Academic Excellence'
+    WHEN aw = '*' THEN 'Academic Merit'
+    ELSE '!!!'
+  END) AS "AWARD",
+  (CASE
+    WHEN aw = '**' THEN 'Academic Excellence'
+    WHEN aw = '*' THEN 'Academic Merit'
+    ELSE '!!!'
+  END) AS "WHAT_HAPPENED",
+  class,
+  0 AS "POINTS",
+  '' AS "REFER_FORM",
+  '' AS "REFER_HOUSE",
+  '' AS "REFER_DEPARTMENT",
+  '' AS "REFER_SCHOOL",
+  '2016-21-09' AS "INCIDENT_DATE"
 
-ORDER BY department, subject, student_course_results.course, sort_order, rank
+FROM final_report
+
+WHERE aw in ('**', '*')
+
+ORDER BY department, subject, course, sort_order, rank
