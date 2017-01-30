@@ -9,6 +9,7 @@ CREATE OR REPLACE VIEW DB2INST1.VIEW_PARENT_USER_ACCOUNTS (
   FULLNAME,
   EMAIL_ADDRESS,
   MOBILE_PHONE,
+  TYPE,
   UNIQUE
 ) AS
 
@@ -29,19 +30,39 @@ WITH all_students AS (
     end_date >= DATE('2012-01-01')
 ),
 
+current_staff AS (
+  SELECT contact_id FROM group_membership
+  WHERE
+    groups_id = 386
+    AND
+    (DATE(current date) BETWEEN effective_start AND effective_end
+    OR
+    (effective_end IS null AND effective_start <= DATE(current date)))
+),
+
 student_mail_carers AS (
   SELECT
     view_student_mail_carers.student_id,
     all_students.student_status_id,
     view_student_mail_carers.carer1_contact_id,
+    carer1_relationship.call_order AS "CARER1_CALL_ORDER",
     view_student_mail_carers.carer2_contact_id,
+    carer2_relationship.call_order AS "CARER2_CALL_ORDER",
     view_student_mail_carers.carer3_contact_id,
+    carer3_relationship.call_order AS "CARER3_CALL_ORDER",
     view_student_mail_carers.carer4_contact_id,
+    carer4_relationship.call_order AS "CARER4_CALL_ORDER",
     'mail' AS "CARER_TYPE"
 
   FROM view_student_mail_carers
   
+  INNER JOIN student ON student.student_id = view_student_mail_carers.student_id
   LEFT JOIN all_students ON all_students.student_id = view_student_mail_carers.student_id
+
+  LEFT JOIN relationship carer1_relationship ON carer1_relationship.contact_id2 = view_student_mail_carers.carer1_contact_id AND carer1_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer2_relationship ON carer2_relationship.contact_id2 = view_student_mail_carers.carer2_contact_id AND carer2_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer3_relationship ON carer3_relationship.contact_id2 = view_student_mail_carers.carer3_contact_id AND carer3_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer4_relationship ON carer4_relationship.contact_id2 = view_student_mail_carers.carer4_contact_id AND carer4_relationship.contact_id1 = student.contact_id
 
   WHERE view_student_mail_carers.student_id IN (SELECT student_id FROM all_students)
 ),
@@ -51,14 +72,24 @@ student_other_carers AS (
     view_student_other_carers.student_id,
     all_students.student_status_id,
     view_student_other_carers.carer1_contact_id,
+    carer1_relationship.call_order AS "CARER1_CALL_ORDER",
     view_student_other_carers.carer2_contact_id,
+    carer2_relationship.call_order AS "CARER2_CALL_ORDER",
     view_student_other_carers.carer3_contact_id,
+    carer3_relationship.call_order AS "CARER3_CALL_ORDER",
     view_student_other_carers.carer4_contact_id,
+    carer4_relationship.call_order AS "CARER4_CALL_ORDER",
     'other' AS "CARER_TYPE"
 
   FROM view_student_other_carers
   
+  INNER JOIN student ON student.student_id = view_student_other_carers.student_id
   LEFT JOIN all_students ON all_students.student_id = view_student_other_carers.student_id
+
+  LEFT JOIN relationship carer1_relationship ON carer1_relationship.contact_id2 = view_student_other_carers.carer1_contact_id AND carer1_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer2_relationship ON carer2_relationship.contact_id2 = view_student_other_carers.carer2_contact_id AND carer2_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer3_relationship ON carer3_relationship.contact_id2 = view_student_other_carers.carer3_contact_id AND carer3_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer4_relationship ON carer4_relationship.contact_id2 = view_student_other_carers.carer4_contact_id AND carer4_relationship.contact_id1 = student.contact_id
 
   WHERE view_student_other_carers.student_id IN (SELECT student_id FROM all_students)
 ),
@@ -68,14 +99,24 @@ student_report_carers AS (
     view_student_report_carers.student_id,
     all_students.student_status_id,
     view_student_report_carers.carer1_contact_id,
+    carer1_relationship.call_order AS "CARER1_CALL_ORDER",
     view_student_report_carers.carer2_contact_id,
+    carer2_relationship.call_order AS "CARER2_CALL_ORDER",
     view_student_report_carers.carer3_contact_id,
+    carer3_relationship.call_order AS "CARER3_CALL_ORDER",
     view_student_report_carers.carer4_contact_id,
+    carer4_relationship.call_order AS "CARER4_CALL_ORDER",
     'report' AS "CARER_TYPE"
 
   FROM view_student_report_carers
   
+  INNER JOIN student ON student.student_id = view_student_report_carers.student_id
   LEFT JOIN all_students ON all_students.student_id = view_student_report_carers.student_id
+
+  LEFT JOIN relationship carer1_relationship ON carer1_relationship.contact_id2 = view_student_report_carers.carer1_contact_id AND carer1_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer2_relationship ON carer2_relationship.contact_id2 = view_student_report_carers.carer2_contact_id AND carer2_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer3_relationship ON carer3_relationship.contact_id2 = view_student_report_carers.carer3_contact_id AND carer3_relationship.contact_id1 = student.contact_id
+  LEFT JOIN relationship carer4_relationship ON carer4_relationship.contact_id2 = view_student_report_carers.carer4_contact_id AND carer4_relationship.contact_id1 = student.contact_id
 
   WHERE view_student_report_carers.student_id IN (SELECT student_id FROM all_students)
 ),
@@ -89,27 +130,27 @@ student_all_carers AS (
 ),
 
 carer_one AS (
-  SELECT student_id, student_status_id, carer1_contact_id AS "CARER_CONTACT_ID", carer_type
+  SELECT student_id, student_status_id, carer1_contact_id AS "CARER_CONTACT_ID", carer_type, carer1_call_order
   FROM student_all_carers
-  WHERE carer1_contact_id IS NOT null
+  WHERE carer1_contact_id IS NOT null AND (carer1_call_order != 7 OR carer1_call_order IS null)
 ),
 
 carer_two AS (
-  SELECT student_id, student_status_id, carer2_contact_id AS "CARER_CONTACT_ID", carer_type
+  SELECT student_id, student_status_id, carer2_contact_id AS "CARER_CONTACT_ID", carer_type, carer2_call_order
   FROM student_all_carers
-  WHERE carer2_contact_id IS NOT null
+  WHERE carer2_contact_id IS NOT null AND (carer2_call_order != 7 OR carer2_call_order IS null)
 ),
 
 carer_three AS (
-  SELECT student_id, student_status_id, carer3_contact_id AS "CARER_CONTACT_ID", carer_type
+  SELECT student_id, student_status_id, carer3_contact_id AS "CARER_CONTACT_ID", carer_type, carer3_call_order
   FROM student_all_carers
-  WHERE carer3_contact_id IS NOT null
+  WHERE carer3_contact_id IS NOT null AND (carer3_call_order != 7 OR carer3_call_order IS null)
 ),
 
 carer_four AS (
-  SELECT student_id, student_status_id, carer4_contact_id AS "CARER_CONTACT_ID", carer_type
+  SELECT student_id, student_status_id, carer4_contact_id AS "CARER_CONTACT_ID", carer_type, carer4_call_order
   FROM student_all_carers
-  WHERE carer4_contact_id IS NOT null
+  WHERE carer4_contact_id IS NOT null AND (carer4_call_order != 7 OR carer4_call_order IS null)
 ),
 
 combined_carers AS (
@@ -203,11 +244,18 @@ all_carers_unique_flag AS (
 all_carers_usernames AS (
   SELECT
     all_carers_unique_flag.carer_contact_id,
-    (all_carers_unique_flag.username || (CASE WHEN unique = 1 THEN '' ELSE CAST((unique - 1) AS CHAR) END)) AS "USERNAME",
+    (CASE
+      WHEN sys_user.username IS NOT null THEN sys_user.username
+      ELSE (all_carers_unique_flag.username || (CASE WHEN unique = 1 THEN '' ELSE CAST((unique - 1) AS CHAR) END))
+    END) AS "USERNAME",
     all_carers_unique_flag.unique,
-    all_carers_unique_flag.status
+    all_carers_unique_flag.status,
+    (CASE WHEN current_staff.contact_id IS NOT null THEN 'staff' ELSE 'carer' END) AS "TYPE"
 
   FROM all_carers_unique_flag
+  
+  LEFT JOIN current_staff ON current_staff.contact_id = all_carers_unique_flag.carer_contact_id
+  LEFT JOIN sys_user ON sys_user.contact_id = current_staff.contact_id
 ),
 
 combined AS (
@@ -222,6 +270,7 @@ combined AS (
     COALESCE(contact.preferred_name, contact.firstname) || ' ' || contact.surname AS "FULLNAME",
     contact.email_address,
     contact.mobile_phone,
+    all_carers_usernames.type,
     all_carers_usernames.unique
   
   FROM all_carers
