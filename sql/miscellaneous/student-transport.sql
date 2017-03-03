@@ -1,45 +1,38 @@
-WITH active_students AS (
-  SELECT student_id
-  FROM TABLE(EDUMATE.getallstudentstatus(current date)) gass
-  WHERE gass.student_status_id = 5
+WITH report_vars AS (
+  SELECT
+    '[[As at=date]]' AS "REPORT_DATE"
+
+  FROM SYSIBM.sysdummy1
 ),
 
-routes AS (
-  SELECT
-    active.student_id,
-    stu_school.way_school_id,
-    stu_school.way_home_id
-  
-  FROM active_students active
-  LEFT JOIN stu_school ON stu_school.student_id = active.student_id
-),
-
-student_transport AS (
-  SELECT
-    student.student_number AS "LOOKUP_CODE",
-    (CASE WHEN contact.preferred_name IS null THEN contact.firstname ELSE contact.preferred_name END) AS "FIRSTNAME",
-    contact.surname,
-    class.class,
-    way_school.way_school AS "WAY_TO_SCHOOL",
-    way_home.way_home
-
-  FROM routes
-  
-  INNER JOIN student ON student.student_id = routes.student_id
-  INNER JOIN contact ON contact.contact_id = student.contact_id
-
-  LEFT JOIN view_student_class_enrolment vsce on vsce.student_id = student.student_id AND vsce.academic_year = (YEAR(current date)) AND vsce.class_type_id = 2 AND vsce.end_date > (current date)
-  INNER JOIN class ON class.class_id = vsce.class_id
-
-  LEFT JOIN way_school ON way_school.way_school_id = routes.way_school_id
-  LEFT JOIN way_home ON way_home.way_home_id = routes.way_home_id
+current_students AS (
+  SELECT student_id FROM TABLE(EDUMATE.getallstudentstatus((SELECT report_date FROM report_vars)))
+  WHERE student_status_id = 5
 )
 
-SELECT * FROM student_transport
+SELECT
+  TO_CHAR((current date), 'DD Month, YYYY') || ' at ' || CHAR(TIME(current timestamp), USA) AS "PRINTED",
+  student.student_number,
+  COALESCE(contact.preferred_name, contact.firstname) || ' ' || contact.surname AS "STUDENT_NAME",
+  REPLACE(vsce.class, ' Home Room ', ' ') AS "HOMEROOM",
+  form.short_name AS "YEAR_GROUP",
+  way_home.way_home AS "TRANSPORT"
 
-WHERE
-  (way_to_school = ('[[Way to School=query_list(SELECT way_school FROM way_school ORDER BY way_school_id)]]') AND way_to_school IS NOT null)
-  OR
-  (way_home = ('[[Way Home=query_list(SELECT way_home FROM way_home ORDER BY way_home_id)]]') AND way_home IS NOT null)
+FROM stu_school
 
-ORDER BY class, surname
+INNER JOIN view_student_class_enrolment vsce ON vsce.student_id = stu_school.student_id
+  AND vsce.class_type_id = 2
+  AND vsce.academic_year = (SELECT YEAR(report_date) FROM report_vars)
+  AND (SELECT report_date FROM report_vars) BETWEEN vsce.start_date AND vsce.end_date
+INNER JOIN student ON student.student_id = stu_school.student_id
+INNER JOIN contact ON contact.contact_id = student.contact_id
+INNER JOIN view_student_form_run vsfr ON vsfr.student_id = stu_school.student_id
+  AND vsce.academic_year = (SELECT YEAR(report_date) FROM report_vars)
+  AND (SELECT report_date FROM report_vars) BETWEEN vsfr.start_date AND vsfr.end_date
+INNER JOIN form ON form.form_id = vsfr.form_id
+
+LEFT JOIN way_home ON way_home.way_home_id = stu_school.way_home_id
+
+WHERE stu_school.student_id IN (SELECT student_id FROM current_students)
+
+ORDER BY vsce.class, contact.surname, contact.preferred_name, contact.firstname
