@@ -11,7 +11,8 @@ CREATE OR REPLACE VIEW DB2INST1.VIEW_STUDENT_ID_CARDS (
   GENDER,
   HOUSE,
   YEAR,
-  HOMEROOM
+  HOMEROOM,
+  BUS
 ) AS
 
 SELECT
@@ -24,13 +25,16 @@ SELECT
   gender.gender,
   (CASE WHEN house.house = 'O&#039;Connor' THEN 'O''Connor' ELSE house.house END) AS "HOUSE",
   gass.form_runs AS "YEAR",
-  REPLACE(class.class, '&#039;', '''') AS "HOMEROOM"
+  REPLACE(REPLACE(class.class, '&#039;', ''''), ' Home Room ', ' ') AS "HOMEROOM",
+  (CASE WHEN way_home.way_home = 'Not Stated / Unknown' THEN null ELSE way_home.way_home END) AS "BUS"
 
 FROM TABLE(EDUMATE.getallstudentstatus(current date)) gass
 
 INNER JOIN student ON student.student_id = gass.student_id
 INNER JOIN contact ON contact.contact_id = student.contact_id
 INNER JOIN gender ON gender.gender_id = contact.gender_id
+LEFT JOIN stu_school ON stu_school.student_id = gass.student_id
+LEFT JOIN way_home ON way_home.way_home_id = stu_school.way_home_id
 LEFT JOIN house ON house.house_id = student.house_id
 
 LEFT JOIN class ON class.class_id = 
