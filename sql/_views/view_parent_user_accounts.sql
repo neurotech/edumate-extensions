@@ -244,10 +244,7 @@ all_carers_unique_flag AS (
 all_carers_usernames AS (
   SELECT
     all_carers_unique_flag.carer_contact_id,
-    (CASE
-      WHEN sys_user.username IS NOT null THEN sys_user.username
-      ELSE (all_carers_unique_flag.username || (CASE WHEN unique = 1 THEN '' ELSE CAST((unique - 1) AS CHAR) END))
-    END) AS "USERNAME",
+    all_carers_unique_flag.username || (CASE WHEN unique = 1 THEN '' ELSE CAST((unique - 1) AS CHAR) END) AS "USERNAME",
     all_carers_unique_flag.unique,
     all_carers_unique_flag.status,
     (CASE WHEN current_staff.contact_id IS NOT null THEN 'staff' ELSE 'carer' END) AS "TYPE"
