@@ -99,7 +99,8 @@ final_report AS (
   LEFT JOIN absences_detail ON absences_detail.student_id = last_attendance.student_id
   LEFT JOIN ytd_attendance ON ytd_attendance.student_id = student.student_id
   
-  WHERE (last_attendance.allday = 3 OR (last_attendance.allday + last_attendance.partial = 3 AND last_attendance.allday >= 1))
+  --WHERE (last_attendance.allday = 3 OR (last_attendance.allday + last_attendance.partial = 3 AND last_attendance.allday >= 1))
+  WHERE last_attendance.allday = 3
 )
 
 SELECT
