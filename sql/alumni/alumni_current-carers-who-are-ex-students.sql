@@ -1,5 +1,5 @@
 WITH BASE_DATA AS (
-  SELECT
+  SELECT DISTINCT
     CARER.CARER_NUMBER AS "LOOKUP_CODE",
     CONTACT.CONTACT_ID,
     CONTACT.FIRSTNAME,
@@ -24,21 +24,50 @@ WITH BASE_DATA AS (
     CONTACT.EMAIL_ADDRESS,
     CONTACT.MOBILE_PHONE
   
-  FROM TABLE(EDUMATE.GETCURRCARERCONTACTINFO(CURRENT DATE, null)) CARERS
+  --FROM TABLE(EDUMATE.GETCURRCARERCONTACTINFO(CURRENT DATE, null)) CARERS
+  FROM DB2INST1.view_current_carers_with_student_id CARERS
   
-  INNER JOIN CONTACT ON CONTACT.CONTACT_ID = CARERS.CONTACT_ID
-  LEFT JOIN TABLE(EDUMATE.GETALLSTUDENTSTATUS(CURRENT DATE)) ALUMNI ON ALUMNI.CONTACT_ID = CARERS.CONTACT_ID AND ALUMNI.STUDENT_STATUS_ID IN (2,3)
-  INNER JOIN CARER ON CARER.CONTACT_ID = CARERS.CONTACT_ID
+  INNER JOIN CONTACT ON CONTACT.CONTACT_ID = CARERS.CARER_CONTACT_ID
+  LEFT JOIN TABLE(EDUMATE.GETALLSTUDENTSTATUS(CURRENT DATE)) ALUMNI ON ALUMNI.CONTACT_ID = CARERS.CARER_CONTACT_ID AND ALUMNI.STUDENT_STATUS_ID IN (2,3)
+  INNER JOIN CARER ON CARER.CONTACT_ID = CARERS.CARER_CONTACT_ID
   
-  LEFT JOIN VIEW_CONTACT_POSTAL_ADDRESS VCPA ON VCPA.CONTACT_ID = CARERS.CONTACT_ID
-  LEFT JOIN VIEW_CONTACT_DEFAULT_ADDRESS VCDA ON VCDA.CONTACT_ID = CARERS.CONTACT_ID
+  LEFT JOIN VIEW_CONTACT_POSTAL_ADDRESS VCPA ON VCPA.CONTACT_ID = CARERS.CARER_CONTACT_ID
+  LEFT JOIN VIEW_CONTACT_DEFAULT_ADDRESS VCDA ON VCDA.CONTACT_ID = CARERS.CARER_CONTACT_ID
   
   WHERE
-    CARERS.DECEASED_FLAG IS NULL
+    CONTACT.DECEASED_FLAG IS NULL
     AND
     ALUMNI.FORM_RUN_INFO IS NOT NULL
 
 ORDER BY ALUMNI.FORM_RUN_INFO, CONTACT.SURNAME
+),
+
+carers_children AS (
+  SELECT
+    base_data.contact_id,
+    COALESCE(contact.preferred_name, contact.firstname) AS "STUDENT_FIRSTNAME",
+    contact.surname AS "STUDENT_SURNAME",
+    COALESCE(contact.preferred_name, contact.firstname) || ' ' || contact.surname AS "STUDENT_NAME",
+    vsfr.form_run AS "YEAR_GROUP",
+    house.house
+
+  FROM base_data
+  
+  LEFT JOIN DB2INST1.view_current_carers_with_student_id current_carers ON current_carers.carer_contact_id = base_data.contact_id
+  INNER JOIN student ON student.student_id = current_carers.student_id
+  INNER JOIN contact ON contact.contact_id = student.contact_id
+  LEFT JOIN view_student_form_run vsfr ON vsfr.student_id = current_carers.student_id AND (current date) BETWEEN vsfr.start_date AND vsfr.end_date
+  INNER JOIN house ON house.house_id = student.house_id
+),
+
+carers_children_agg AS (
+  SELECT
+    contact_id,
+    LISTAGG(student_name || ' (' || year_group || ' - ' || house || ')', ', ') WITHIN GROUP(ORDER BY UPPER(student_surname), UPPER(student_firstname)) AS "STUDENTS"
+  
+  FROM carers_children
+  
+  GROUP BY contact_id
 ),
 
 ALL_EMAILS AS (
@@ -57,10 +86,12 @@ SELECT
   BASE_DATA.CARER_COUNTRY,
   BASE_DATA.CARER_PHONE,
   BASE_DATA.EMAIL_ADDRESS,
-  BASE_DATA.MOBILE_PHONE
+  BASE_DATA.MOBILE_PHONE,
+  carers_children_agg.students
 
 FROM BASE_DATA
 
+LEFT JOIN carers_children_agg ON carers_children_agg.contact_id = base_data.contact_id
 CROSS JOIN ALL_EMAILS
 
 ORDER BY BASE_DATA.FORM_RUN_INFO, BASE_DATA.SURNAME
