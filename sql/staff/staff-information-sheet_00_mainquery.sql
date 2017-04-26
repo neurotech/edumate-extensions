@@ -52,9 +52,9 @@ STAFFBASE AS
   FROM STAFF
 
   INNER JOIN CONTACT ON CONTACT.CONTACT_ID = STAFF.CONTACT_ID
-  INNER JOIN salutation ON salutation.salutation_id = contact.salutation_id
-  INNER JOIN gender ON gender.gender_id = contact.gender_id
-  INNER JOIN house ON house.house_id = staff.house_id
+  LEFT JOIN salutation ON salutation.salutation_id = contact.salutation_id
+  LEFT JOIN gender ON gender.gender_id = contact.gender_id
+  LEFT JOIN house ON house.house_id = staff.house_id
   
   INNER JOIN GROUP_MEMBERSHIP ON GROUP_MEMBERSHIP.CONTACT_ID = STAFF.CONTACT_ID
   INNER JOIN GROUPS ON GROUPS.GROUPS_ID = GROUP_MEMBERSHIP.GROUPS_ID AND (GROUPS.GROUPS_ID = 386)
@@ -74,22 +74,7 @@ STAFFBASE AS
 
   LEFT JOIN CONTACT_QUALIFICATION ON CONTACT_QUALIFICATION.CONTACT_ID = STAFF.CONTACT_ID
   
-  WHERE
-    CONTACT.SURNAME NOT LIKE 'Coach'
-      AND
-    SE.EMPLOYMENT_TYPE_ID IN (1,2,4)
-      AND
-    STAFF.STAFF_ID NOT IN (1,1057)
-      AND
-    (
-      SE.START_DATE <= (CURRENT DATE)
-      OR
-      SE.START_DATE IS NULL
-    )
-      AND
-    SE.END_DATE IS NULL
-      OR
-    SE.END_DATE > current_date
+  WHERE group_membership.groups_id = 386
 )
 
 SELECT
