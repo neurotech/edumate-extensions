@@ -93,7 +93,7 @@ joined AS (
     ac.teacher_firstname,
     ac.teacher_surname,
     ac.class_id,
-    ac.class,
+    REPLACE(ac.class, ' Home Room ', ' ') AS "HOME_ROOM",
     ROW_NUMBER() OVER (PARTITION BY ac.student_contact_id) AS "STUDENT_SORT",
     ac.student_contact_id,
     ac.student_firstname,
@@ -107,7 +107,7 @@ joined AS (
       THEN CHAR(TIME(app.end_date),USA)
       ELSE TO_CHAR((DATE(app.end_date)), 'DD/MM/YY') || ' - ' || CHAR(TIME(app.end_date),USA)
     END) AS "APP_END",
-    timestampdiff(4, char(timestamp(app.end_date) - timestamp(app.start_date))) || ' min' AS "DURATION",
+    timestampdiff(4, char(timestamp(app.end_date) - timestamp(app.start_date))) || ' m' AS "DURATION",
     (CASE
       WHEN app.outcome_option = 0 THEN 'Held'
       WHEN app.outcome_option = 1 THEN 'Postponed'
@@ -168,13 +168,13 @@ SELECT
   overall_sort,
   (CASE WHEN overall_sort = 1 THEN joined.teacher_firstname ELSE null END) AS "TEACHER_FIRSTNAME",
   (CASE WHEN overall_sort = 1 THEN joined.teacher_surname ELSE null END) AS "TEACHER_SURNAME",
-  (CASE WHEN overall_sort = 1 THEN joined.class ELSE null END) AS "CLASS",
+  (CASE WHEN overall_sort = 1 THEN joined.home_room ELSE null END) AS "HOME_ROOM",
   (CASE WHEN overall_sort = 1 THEN appointment_counts.group_students_total ELSE null END) AS "NO_OF_STUDENTS",
   (CASE WHEN overall_sort = 1 THEN appointment_counts.no_appts ELSE null END) AS "NO_APPTS",
   (CASE WHEN overall_sort = 1 THEN note_counts.no_notes ELSE null END) AS "NO_NOTES",
   (CASE WHEN student_sort = 1 THEN joined.student_firstname ELSE null END) AS "STUDENT_FIRSTNAME",
   (CASE WHEN student_sort = 1 THEN joined.student_surname ELSE null END) AS "STUDENT_SURNAME",
-  (CASE WHEN student_sort = 1 THEN joined.year_group ELSE null END) AS "STUDENT_YEAR_GROUP",
+  joined.year_group AS "STUDENT_YEAR_GROUP",
   LEFT(joined.subject, 9) || '...' AS "SUBJECT",
   joined.app_start_date AS "APP_DATE",
   joined.app_start_time,
@@ -198,4 +198,5 @@ FROM joined
 LEFT JOIN appointment_counts ON appointment_counts.teacher_contact_id = joined.teacher_contact_id
 LEFT JOIN note_counts ON note_counts.teacher_contact_id = joined.teacher_contact_id
 CROSS JOIN grand_totals
-ORDER BY joined.class, UPPER(joined.teacher_surname)
+
+ORDER BY joined.home_room, UPPER(joined.teacher_surname)
